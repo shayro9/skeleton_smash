@@ -81,6 +81,7 @@ GetCurrDirCommand::GetCurrDirCommand(const char *cmdLine, const char *cmd_line) 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
     getcwd(path, PATH_MAX);
+    
     cout << path << endl;
 }
 
