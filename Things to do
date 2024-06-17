@@ -1,3 +1,7 @@
 לברר על הרווח ועל איך מייצגים את הרווח
 To merge the files and to solve the conflict of char * and string
 To remove the & from the end of the word in Built - in commands.
+
+SHAY:
+    do not execute if creation failed
+    maybe add a static function to extract arguments
