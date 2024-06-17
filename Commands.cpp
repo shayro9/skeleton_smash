@@ -1,14 +1,16 @@
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include <climits>
+#include <sys/types.h>
+#include <sys/resource.h>
+#include <csignal>
 #include <regex>
-#include <limits.h>
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
-#include <limits>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -112,7 +114,6 @@ void ChangeDirCommand ::execute() {
         std :: cerr << "error: cd: too many arguments\n";
         return;
     }
-    std :: string new_path;
     if(line[3] == '-'){
         if(_trim(this->m_lastPwd).empty()){
             std :: cerr << "error: cd: OLDPWD not set\n";
@@ -144,8 +145,6 @@ vector<string> spllitStringByChar(string str, string delim) {
         }
         return res;
 }
-/*
-*/
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
@@ -175,9 +174,7 @@ void ExternalCommand :: execute(){
 
 
 void ShowPidCommand::execute() {
-    pid_t pid;
-    pid = getpid();
-    cout <<"smash pid is " << pid << endl;
+    cout <<"smash pid is " << m_pid << endl;
 }
 
 void ChangePrompt::execute() {
@@ -191,7 +188,7 @@ void ChangePrompt::execute() {
     SmallShell::getInstance().SetPrompt(prompt);
 }
 
- 
+
 aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
 void aliasCommand:: execute(){
     string line = _trim(string(m_cmd));
@@ -231,14 +228,18 @@ RedirectionCommand :: RedirectionCommand(const char *cmd_line){
 
 void RedirectionCommand :: execute(){}
 /////////////////////////////////////////
+
 JobsList::JobsList(){}
+
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd;
     return os;
 }
+
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = *(--m_max_ids.end());
-    JobEntry job(isStopped, max_id+1, cmd,getpid());
+
+    JobEntry job(isStopped, max_id+1, cmd);
     m_jobs.insert({max_id+1,job});
     m_max_ids.insert(max_id+1);
 }
@@ -252,7 +253,7 @@ void JobsList :: printJobsList(){
 
 void JobsList :: killAllJobs(){
     for(auto i : m_jobs){
-
+        kill();
     }
 }
 
@@ -261,7 +262,7 @@ void JobsList :: removeFinishedJobs(){
 }
 
 JobsList ::JobEntry* JobsList :: getJobById(int jobId){
-    return &(m_jobs.find(jobId)->second);
+    return &(m_jobs.find(unsigned int(jobId))->second);
 }
 
 void JobsList :: removeJobById(int jobId){
@@ -279,7 +280,7 @@ JobsList::JobEntry *getLastStoppedJob(int *jobId){
 // TODO: Add extra methods or modify exisitng ones as needed
 
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped), m_pid(pid) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
 
 
 
@@ -330,7 +331,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
         return new aliasCommand(cmd_line, &m_aliasDS);
     }
     else if(m_aliasDS.checkInAlias(firstWord) == true){
-        
+
         ////// TO handle alias command that is printed
         std :: string tmp = m_aliasDS.TranslateAlias(firstWord);
         if(tmp != ""){
@@ -352,7 +353,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
 }
 
 
-/////////////////////////////////////////// 
+///////////////////////////////////////////
 void aliasCommand_DS :: add_alias_command(std :: string name, std::string command){
     if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
         throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
@@ -364,7 +365,7 @@ void aliasCommand_DS :: remove_alias_command(std :: string name){
         return p.first == name;});
     if (it != m_alias.end()) {
         m_alias.erase(it);
-    } else { 
+    } else {
         throw std::invalid_argument( "smash error: unalias: " +name+" alias does not exist");
     }
 }
