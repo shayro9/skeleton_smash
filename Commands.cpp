@@ -5,7 +5,6 @@
 #include <sstream>
 #include <climits>
 #include <sys/types.h>
-#include <sys/resource.h>
 #include <csignal>
 #include <sys/wait.h>
 #include <iomanip>
@@ -87,7 +86,7 @@ GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+//ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 
 void GetCurrDirCommand::execute() {
@@ -233,11 +232,12 @@ void JobsList :: removeJobById(int jobId){
 
 JobsList::JobEntry *getLastJob(int *lastJobId){
     //Nitay
+    return nullptr;
 }
 
 JobsList::JobEntry *getLastStoppedJob(int *jobId){
 //nitaY
-
+    return nullptr;
 }
 
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
@@ -267,7 +267,7 @@ std::string SmallShell::GetPrompt() {
 }
 
 void SmallShell::SetPrompt(const string& prompt){
-    if(prompt.size() > 0)
+    if(!prompt.empty())
         m_prompt = prompt + "> ";
     else
         m_prompt = "smash> ";
@@ -278,28 +278,24 @@ void SmallShell::SetPrompt(const string& prompt){
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-
     string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of("& \n"));
 
-    if (firstWord.compare("pwd") == 0) {
+    if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(cmd_line);
     }
-    else if (firstWord.compare("showpid") == 0) {
+    else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
-    else if (firstWord.compare("chprompt") == 0) {
+    else if (firstWord == "chprompt") {
         return new ChangePrompt(cmd_line);
     }
     else {
-    return new ExternalCommand(cmd_line);
-
+        return new ExternalCommand(cmd_line);
     }
-    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
