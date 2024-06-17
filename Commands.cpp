@@ -5,12 +5,11 @@
 #include <sstream>
 #include <climits>
 #include <sys/types.h>
-#include <sys/resource.h>
 #include <csignal>
-#include <regex>
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <limits>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -87,7 +86,7 @@ GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+//ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 
 void GetCurrDirCommand::execute() {
@@ -108,12 +107,6 @@ void ChangeDirCommand ::execute() {
     ///// TO fix this
     std :: string new_path;
     string line = _trim(this->m_cmd);
-    char former_path[PATH_MAX];
-    getcwd(former_path, PATH_MAX);
-    if(line == "cd") {
-        this->m_lastPwd = string(former_path);
-        return;
-    }
     if(!checkValid(line)){
         //TODO: error
         std :: cerr << "error: cd: too many arguments\n";
@@ -125,10 +118,11 @@ void ChangeDirCommand ::execute() {
             return;
         }
         new_path = this->m_lastPwd;
+    }else{
+        new_path = this->m_cmd.substr(3, this->m_cmd.size());
     }
-    else{
-        new_path = this->m_cmd.substr(3);
-    }
+    char former_path[PATH_MAX];
+    getcwd(former_path, PATH_MAX);
     int res = chdir(new_path.c_str());
     if(res !=0){
         perror("smash error: chdir failed");
@@ -146,7 +140,7 @@ vector<string> spllitStringByChar(string str, string delim) {
         while(index != -1){
             index = str.find_first_of(delim);
             res.push_back(str.substr(0, index));
-            str = str.substr(index+1);
+            str = str.substr(index+1, str.size());
         }
         return res;
 }
@@ -194,45 +188,6 @@ void ChangePrompt::execute() {
     SmallShell::getInstance().SetPrompt(prompt);
 }
 
-
-aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-void aliasCommand:: execute(){
-    string line = _trim(string(m_cmd));
-    if(line =="alias"){
-        m_aliasDS->print_alias_command();
-        return;
-    }
-    regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
-    if(regex_match(line, reg) == false){
-        throw std::invalid_argument("smash error: alias: invalid alias format");
-    }
-    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
-    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-    m_aliasDS->add_alias_command(name, command);//removing quotes from the command
-}
-
-unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-
-void unaliasCommand :: execute(){
-    char **args;
-    int size = _parseCommandLine(m_cmd.c_str(), args);
-    for(int i = 0 ; i < size; i++){
-        try{
-        m_aliasDS->remove_alias_command(string(args[i]));
-        }catch(const std :: exception& e){
-            for(int j = 0 ;j < size; j++){free(args[j]);}
-            throw e;
-        }
-    }
-    for(int j = 0 ;j < size; j++){free(args[j]);}
-}
-
-
-RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-
-}
-
-void RedirectionCommand :: execute(){}
 /////////////////////////////////////////
 
 JobsList::JobsList(){}
@@ -277,11 +232,12 @@ void JobsList :: removeJobById(int jobId){
 
 JobsList::JobEntry *getLastJob(int *lastJobId){
     //Nitay
+    return nullptr;
 }
 
 JobsList::JobEntry *getLastStoppedJob(int *jobId){
 //nitaY
-
+    return nullptr;
 }
 
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
@@ -311,7 +267,7 @@ std::string SmallShell::GetPrompt() {
 }
 
 void SmallShell::SetPrompt(const string& prompt){
-    if(prompt.size() > 0)
+    if(!prompt.empty())
         m_prompt = prompt + "> ";
     else
         m_prompt = "smash> ";
@@ -322,38 +278,24 @@ void SmallShell::SetPrompt(const string& prompt){
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
-    // For example:
-
     string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of("& \n"));
 
-    if (firstWord.compare("pwd") == 0) {
+    if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(cmd_line);
     }
-    else if (firstWord.compare("showpid") == 0) {
+    else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
-    else if (firstWord.compare("chprompt") == 0) {
+    else if (firstWord == "chprompt") {
         return new ChangePrompt(cmd_line);
-    }
-    else if (firstWord.compare("alias") == 0) {
-        return new aliasCommand(cmd_line, &m_aliasDS);
-    }
-    else if(m_aliasDS.checkInAlias(firstWord) == true){
-
-        ////// TO handle alias command that is printed
-        std :: string tmp = m_aliasDS.TranslateAlias(firstWord);
-        if(tmp != ""){
-            return this->CreateCommand(tmp.c_str());
-        }
     }
     else {
         return new ExternalCommand(cmd_line);
     }
-    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
@@ -362,38 +304,4 @@ void SmallShell::executeCommand(const char *cmd_line) {
      Command* cmd = CreateCommand(cmd_line);
      cmd->execute();
     // Please note that you must fork smash process for some commands (e.g., external commands....)
-}
-
-
-///////////////////////////////////////////
-void aliasCommand_DS :: add_alias_command(std :: string name, std::string command){
-    if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
-        throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
-    }
-    m_alias.push_back({name, command});
-}
-void aliasCommand_DS :: remove_alias_command(std :: string name){
-    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&name](const std::pair<std::string, std::string>& p) {
-        return p.first == name;});
-    if (it != m_alias.end()) {
-        m_alias.erase(it);
-    } else {
-        throw std::invalid_argument( "smash error: unalias: " +name+" alias does not exist");
-    }
-}
-void aliasCommand_DS :: print_alias_command(){
-    for (auto i : m_alias){
-        std ::cout << i.first << "=" << i.second << std::endl;
-    }
-}
-
-bool aliasCommand_DS :: checkInAlias(std::string alias){
-    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
-    return p.first == alias;});
-    return (it != m_alias.end());
-}
-std::string aliasCommand_DS :: TranslateAlias(std::string alias){
-    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
-    return p.first == alias;});
-    return it->second;
 }
