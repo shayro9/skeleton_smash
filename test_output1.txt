@@ -1,0 +1,1228 @@
+smash> got heresleep
+/bin/bash
+-c
+sleep 1
+smash> got herechprompt
+/bin/bash
+-c
+chprompt hello
+smash> got heresleep
+/bin/bash
+-c
+sleep 2
+smash> got heresleep
+/bin/bash
+-c
+sleep 3
+smash> got heresleep
+/bin/bash
+-c
+sleep 5&
+smash> got herechprompt
+/bin/bash
+-c
+chprompt
+smash> got heresleep
+/bin/bash
+-c
+sleep 10&
+smash> got heresleep
+/bin/bash
+-c
+sleep 12
+smash> got herequit
+/bin/bash
+-c
+quit kill
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
+smash> got here
+/bin/bash
+-c
+
