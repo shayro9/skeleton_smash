@@ -14,9 +14,10 @@ using namespace std;
 vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 class Command {
 // TODO: Add your data members
+private:
+    const pid_t m_pid;
 protected:
     const std::string m_cmd;
-    const pid_t m_pid;
 public:
     Command(const char *cmd_line) : m_cmd(cmd_line), m_pid(getpid()) {}
 
@@ -26,6 +27,7 @@ public:
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
+    pid_t GetPid() const;
 };
 
 class BuiltInCommand : public Command {
@@ -131,13 +133,14 @@ class JobsList {
 public:
     class JobEntry {
         // TODO: Add your data members
+    private:
         unsigned int m_id;
-        const Command* m_cmd;
         bool m_is_finished;
-        pid_t m_pid; // ?????
-        public:
-            JobEntry(bool is_stopped, unsigned int id,Command* cmd);
-            friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
+        const Command* m_cmd;
+    public:
+        JobEntry(bool is_stopped, unsigned int id,Command* cmd);
+        friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
+        const Command* GetCommand() const;
     };
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
