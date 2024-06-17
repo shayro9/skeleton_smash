@@ -102,12 +102,12 @@ void ChangeDirCommand ::execute() {
     if(!checkValid(this->m_cmd)){
         //TODO: error
         std :: cerr << "error: cd: too many arguments\n";
-        exit(1);
+        return;
     }
     if(this->m_cmd[3] == '-'){
         if(this->m_lastPwd.empty()){
             std :: cerr << "error: cd: OLDPWD not set\n";
-            exit(1);
+            return;
         }
         new_path = this->m_lastPwd;
     }else{
@@ -118,7 +118,7 @@ void ChangeDirCommand ::execute() {
     int res = chdir(new_path.c_str());
     if(res !=0){
         perror("smash error: chdir failed");
-        exit(1);
+        return;
     }
     this->m_lastPwd = string(former_path);
 }
