@@ -5,11 +5,11 @@
 #include <sstream>
 #include <climits>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <csignal>
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
-#include <limits>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -280,6 +280,12 @@ void ExternalCommand :: execute(){
 
 JobsList::JobsList(){}
 
+
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd;
+    return os;
+}
+
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = 0;
     if(!m_max_ids.empty())
@@ -293,7 +299,7 @@ void JobsList :: addJob(Command *cmd, bool isStopped){
 void JobsList :: printJobsList(){
     removeFinishedJobs();
     for(auto i : m_jobs){
-        cout << "[" << i.first  << "] " << i.second << i.second.GetCommand()->GetPid() << endl;
+        cout << "[" << i.first  << "] " << i.second << endl;
     }
 }
 
