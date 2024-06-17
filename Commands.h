@@ -87,7 +87,7 @@ public:
     void execute() override;
 };
 //TODO?
-std :: string ChangeDirCommand :: m_lastPwd;
+//std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -179,7 +179,10 @@ public:
 };
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
+private:
+    unsigned int m_signum;
+    unsigned int m_jobId;
+    JobsList::JobEntry* m_job;
 public:
     KillCommand(const char *cmd_line, JobsList *jobs);
 
