@@ -1,13 +1,13 @@
-#include <unistd.h>
+//#include <unistd.h>
 #include <string.h>
 #include <iostream>
 #include <vector>
 #include <sstream>
 #include <limits.h>
-#include <sys/wait.h>
+//#include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
-
+#include <limits>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -89,7 +89,7 @@ void GetCurrDirCommand::execute() {
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
-bool checkValid(const char* line){
+bool checkValid(const string& line){
     std::string str(line);
     std::string argument = str.substr(3);
     if (argument.find(' ') != string::npos) {
@@ -98,20 +98,22 @@ bool checkValid(const char* line){
     return true;
 }
 void ChangeDirCommand ::execute() {
+    ///// TO fix this
     std :: string new_path;
-    if(!checkValid(this->m_cmd)){
+    string line = _trim(this->m_cmd);
+    if(!checkValid(line)){
         //TODO: error
         std :: cerr << "error: cd: too many arguments\n";
         return;
     }
-    if(this->m_cmd[3] == '-'){
-        if(this->m_lastPwd.empty()){
+    if(line[3] == '-'){
+        if(_trim(this->m_lastPwd).empty()){
             std :: cerr << "error: cd: OLDPWD not set\n";
             return;
         }
         new_path = this->m_lastPwd;
     }else{
-        new_path = (this->m_cmd + 3);
+        new_path = this->m_cmd.substr(3, this->m_cmd.size());
     }
     char former_path[PATH_MAX];
     getcwd(former_path, PATH_MAX);
@@ -139,7 +141,7 @@ vector<string> spllitStringByChar(string str, string delim) {
 }
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
-    string line = this->m_cmd;
+    string line = _trim(this->m_cmd);
     string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
     cout << "got here" << firstWord<< endl;
     if(firstWord.find(".") != string::npos){
@@ -182,8 +184,58 @@ void ChangePrompt::execute() {
     SmallShell::getInstance().SetPrompt(prompt);
 }
 
+/////////////////////////////////////////
+JobsList::JobsList(){}
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd;
+    return os;
+}
+void JobsList :: addJob(Command *cmd, bool isStopped = false){
+    unsigned int max_id = *(--m_max_ids.end());
+    JobEntry job(isStopped, max_id+1, cmd);
+    m_jobs.insert({max_id+1,job});
+    m_max_ids.insert(max_id+1);
+}
+
+void JobsList :: printJobsList(){
+    //TO DO: Delte the finished jobs - shay
+    for(auto i : m_jobs){
+        cout << "[" << i.first  << "] " << i.second << endl;
+    }
+}
+
+void JobsList :: killAllJobs(){
+//Shay
+}
+
+void JobsList :: removeFinishedJobs(){
+//nitay
+}
+
+JobsList ::JobEntry* JobsList :: getJobById(int jobId){
+    return &(m_jobs.find(unsigned int(jobId))->second);
+}
+
+void JobsList :: removeJobById(int jobId){
+//SHAY
+}
+
+JobsList::JobEntry *getLastJob(int *lastJobId){
+    //Nitay
+}
+
+JobsList::JobEntry *getLastStoppedJob(int *jobId){
+//nitaY
+
+}
+// TODO: Add extra methods or modify exisitng ones as needed
 
 
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped), m_pid(pid) {}
+
+
+
+/// @brief ///////////////////////////////
 SmallShell::SmallShell() : m_prompt("smash> "){
 // TODO: add your implementation
 
@@ -225,6 +277,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord.compare("chprompt") == 0) {
         return new ChangePrompt(cmd_line);
+    }
     else {
     return new ExternalCommand(cmd_line);
 

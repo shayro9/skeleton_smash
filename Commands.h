@@ -1,13 +1,14 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <vector>
-#include <map>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+#include <map>
 #include <vector>
 #include <string>
+#include <set>
+
 using namespace std;
 class Command {
 // TODO: Add your data members
@@ -129,15 +130,20 @@ public:
         // TODO: Add your data members
         unsigned int m_id;
         const Command* m_cmd;
-        bool m_is_finished; // ?????
+        bool m_is_finished;
+        pid_t m_pid; // ?????
+        public:
+            JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid);
+            friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
     };
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
+    std ::set<unsigned int> m_max_ids;
     int m_last_job_id;
 public:
     JobsList();
 
-    ~JobsList();
+    ~JobsList(){}
 
     void addJob(Command *cmd, bool isStopped = false);
 
