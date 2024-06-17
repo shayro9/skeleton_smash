@@ -76,13 +76,16 @@ void _removeBackgroundSign(char *cmd_line) {
 }
 
 // TODO: Add your implementation for classes in Commands.h
-GetCurrDirCommand::GetCurrDirCommand(const char *cmdLine, const char *cmd_line) : BuiltInCommand(cmdLine) {}
+GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
     getcwd(path, PATH_MAX);
     cout << path << endl;
 }
+
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
@@ -162,13 +165,45 @@ void ExternalCommand :: execute(){
 }
 
 
-SmallShell::SmallShell() {
+void ShowPidCommand::execute() {
+    pid_t pid;
+    pid = getpid();
+    cout <<"smash pid is " << pid << endl;
+}
+
+void ChangePrompt::execute() {
+    string cmd_s = _trim(string(m_cmd));
+    string prompt;
+    int firstSpace = cmd_s.find_first_of(WHITESPACE);
+    if (firstSpace > 0)
+        prompt = cmd_s.substr( firstSpace + 1, cmd_s.find_first_of(" \n"));
+    else
+        prompt = "";
+    SmallShell::getInstance().SetPrompt(prompt);
+}
+
+
+
+SmallShell::SmallShell() : m_prompt("smash> "){
 // TODO: add your implementation
+
 }
 
 SmallShell::~SmallShell() {
 // TODO: add your implementation
 }
+
+std::string SmallShell::GetPrompt() {
+    return m_prompt;
+}
+
+void SmallShell::SetPrompt(const string& prompt){
+    if(prompt.size() > 0)
+        m_prompt = prompt + "> ";
+    else
+        m_prompt = "smash> ";
+}
+
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -180,21 +215,19 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
     if (firstWord.compare("pwd") == 0) {
-    return new GetCurrDirCommand(nullptr, cmd_line);
+        return new GetCurrDirCommand(cmd_line);
     }
-    //else if (firstWord.compare("showpid") == 0) {
-    //return new ShowPidCommand(cmd_line);
-    //}
     else if (firstWord.compare("cd") == 0) {
-    return new ChangeDirCommand(cmd_line);
+        return new ChangeDirCommand(cmd_line);
     }
-    /*
+    else if (firstWord.compare("showpid") == 0) {
+        return new ShowPidCommand(cmd_line);
     }
-    else if ...
-    .....
-    */
+    else if (firstWord.compare("chprompt") == 0) {
+        return new ChangePrompt(cmd_line);
     else {
     return new ExternalCommand(cmd_line);
+
     }
     return nullptr;
 }

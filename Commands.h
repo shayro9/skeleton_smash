@@ -1,6 +1,8 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
+#include <vector>
+#include <map>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -10,7 +12,7 @@ using namespace std;
 class Command {
 // TODO: Add your data members
 protected:
-    const char* m_cmd;
+    const std::string m_cmd;
 public:
     Command(const char *cmd_line) : m_cmd(cmd_line) {}
 
@@ -84,7 +86,7 @@ std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-    GetCurrDirCommand(const char *cmdLine, const char *cmd_line);
+    GetCurrDirCommand(const char *cmdLine);
 
     virtual ~GetCurrDirCommand() {}
 
@@ -96,6 +98,15 @@ public:
     ShowPidCommand(const char *cmd_line);
 
     virtual ~ShowPidCommand() {}
+
+    void execute() override;
+};
+
+class ChangePrompt : public BuiltInCommand {
+public:
+    ChangePrompt(const char *cmd_line);
+
+    virtual ~ChangePrompt() {}
 
     void execute() override;
 };
@@ -116,8 +127,13 @@ class JobsList {
 public:
     class JobEntry {
         // TODO: Add your data members
+        unsigned int m_id;
+        const Command* m_cmd;
+        bool m_is_finished; // ?????
     };
     // TODO: Add your data members
+    std::map<unsigned int, JobEntry> m_jobs;
+    int m_last_job_id;
 public:
     JobsList();
 
@@ -211,6 +227,7 @@ public:
 class SmallShell {
 private:
     // TODO: Add your data members
+    std::string m_prompt;
     SmallShell();
 
 public:
@@ -229,6 +246,8 @@ public:
 
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
+    std::string GetPrompt();
+    void SetPrompt(const std::string& prompt);
 };
 
 #endif //SMASH_COMMAND_H_
