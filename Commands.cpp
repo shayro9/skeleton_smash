@@ -1,4 +1,4 @@
-//#include <unistd.h>
+#include <unistd.h>
 #include <string.h>
 #include <iostream>
 #include <vector>
@@ -80,14 +80,14 @@ GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
     getcwd(path, PATH_MAX);
     cout << path << endl;
 }
-
-
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 bool checkValid(const string& line){
     std::string str(line);
@@ -127,7 +127,6 @@ void ChangeDirCommand ::execute() {
 
 
 ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
-
 
 vector<string> spllitStringByChar(string str, string delim) {
         vector<string> res;
@@ -190,7 +189,7 @@ std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd;
     return os;
 }
-void JobsList :: addJob(Command *cmd, bool isStopped = false){
+void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = *(--m_max_ids.end());
     JobEntry job(isStopped, max_id+1, cmd);
     m_jobs.insert({max_id+1,job});
@@ -198,14 +197,16 @@ void JobsList :: addJob(Command *cmd, bool isStopped = false){
 }
 
 void JobsList :: printJobsList(){
-    //TO DO: Delte the finished jobs - shay
+    //TODO: Delete the finished jobs - shay
     for(auto i : m_jobs){
         cout << "[" << i.first  << "] " << i.second << endl;
     }
 }
 
 void JobsList :: killAllJobs(){
-//Shay
+    for(auto i : m_jobs){
+
+    }
 }
 
 void JobsList :: removeFinishedJobs(){
