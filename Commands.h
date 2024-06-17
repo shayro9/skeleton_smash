@@ -1,13 +1,15 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
 
-#include <vector>
 
 #define COMMAND_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-
+#include <vector>
+#include <string>
+using namespace std;
 class Command {
 // TODO: Add your data members
+protected:
     const char* m_cmd;
 public:
     Command(const char *cmd_line) : m_cmd(cmd_line) {}
@@ -67,13 +69,18 @@ public:
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-    ChangeDirCommand(const char *cmd_line, char **plastPwd);
+// TODO: Add your data members 
+    static std :: string m_lastPwd;
+public:
+
+    ChangeDirCommand(const char *cmd_line);
+    //ChangeDirCommand(const char *cmd_line, std :: string lastPwd);
 
     virtual ~ChangeDirCommand() {}
-
+    friend bool checkValid(const char* line);
     void execute() override;
 };
+std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:

@@ -84,7 +84,7 @@ void GetCurrDirCommand::execute() {
     cout << path << endl;
 }
 
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line, std :: string lastPwd) : BuiltInCommand(cmd_line), m_lastPwd(lastPwd) {}
 
 bool checkValid(const char* line){
     std::string str(line);
@@ -117,31 +117,27 @@ void ChangeDirCommand ::execute() {
         perror("smash error: chdir failed");
         exit(1);
     }
-    this->m_lastPwd = string(former_path);
+    this->m_lastPwd = former_path;
 }
 
 
 ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
 
 
-vector<string> spllitStringByChar(string str, string delim) {
-        vector<string> res;
-        int index = str.find_first_of(delim);
-        while(index != -1){
-            index = str.find_first_of(delim);
-            res.push_back(str.substr(0, index));
-            str = str.substr(index+1, str.size());
+vector<string> spllitStringByChar(const string& str, char delim) {
+        vector<char* > res;
+        while(str!= string::npos){
+            res.push_back(str.substr(0, str.find_first_of(delim)));
+            str = str.substr(0, str.find_first_of(delim));
         }
-        return res;
 }
 void ExternalCommand :: execute(){
-    std::vector<const char*> arguments;
+    std::vector<char*> arguments;
     string line = this->m_cmd;
-    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
-    cout << "got here" << firstWord<< endl;
+    string firstWord = line.substr(0, line.find_first_of(" \n"));//?? why " \n"
     if(firstWord.find(".") != string::npos){
         vector<string> tmp = spllitStringByChar(line, WHITESPACE);
-        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
+        for(int  i= 0 ; i < tmp.size() ; i++){arguments[i] = tmp[i].c_str();}
         arguments.push_back(nullptr);
     }
     else{
@@ -150,12 +146,10 @@ void ExternalCommand :: execute(){
         arguments.push_back(line.c_str());
         arguments.push_back(nullptr);
     }
-
     int wstatus;
     pid_t pid = fork();
     if (pid == 0) {
-        for(auto i : arguments){cout << i << endl;}
-        execv(arguments[0], const_cast<char* const*>(arguments.data()));
+        execv(arguments[0], arguments.data());
     } else {
         waitpid(pid, &wstatus, 0);;
     }
@@ -182,11 +176,11 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(nullptr, cmd_line);
     }
-    //else if (firstWord.compare("showpid") == 0) {
-    //return new ShowPidCommand(cmd_line);
-    //}
+    else if (firstWord.compare("showpid") == 0) {
+    return new ShowPidCommand(cmd_line);
+    }
     else if (firstWord.compare("cd") == 0) {
-    return new ChangeDirCommand(cmd_line);
+    return new ChangeDirCommand(cmd_line, this->lastPwd);
     }
     /*
     }
