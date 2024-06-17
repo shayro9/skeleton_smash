@@ -1,10 +1,13 @@
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include <limits.h>
-//#include <sys/wait.h>
+#include <climits>
+#include <sys/types.h>
+#include <sys/resource.h>
+#include <csignal>
+#include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
 #include <limits>
@@ -167,9 +170,7 @@ void ExternalCommand :: execute(){
 
 
 void ShowPidCommand::execute() {
-    pid_t pid;
-    pid = getpid();
-    cout <<"smash pid is " << pid << endl;
+    cout <<"smash pid is " << m_pid << endl;
 }
 
 void ChangePrompt::execute() {
@@ -184,13 +185,17 @@ void ChangePrompt::execute() {
 }
 
 /////////////////////////////////////////
+
 JobsList::JobsList(){}
+
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd;
     return os;
 }
+
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = *(--m_max_ids.end());
+
     JobEntry job(isStopped, max_id+1, cmd);
     m_jobs.insert({max_id+1,job});
     m_max_ids.insert(max_id+1);
@@ -205,7 +210,7 @@ void JobsList :: printJobsList(){
 
 void JobsList :: killAllJobs(){
     for(auto i : m_jobs){
-
+        kill();
     }
 }
 
@@ -232,7 +237,7 @@ JobsList::JobEntry *getLastStoppedJob(int *jobId){
 // TODO: Add extra methods or modify exisitng ones as needed
 
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped), m_pid(pid) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
 
 
 

@@ -14,8 +14,9 @@ class Command {
 // TODO: Add your data members
 protected:
     const std::string m_cmd;
+    const pid_t m_pid;
 public:
-    Command(const char *cmd_line) : m_cmd(cmd_line) {}
+    Command(const char *cmd_line) : m_cmd(cmd_line), m_pid(getpid()) {}
 
     virtual ~Command() {}
 
@@ -133,7 +134,7 @@ public:
         bool m_is_finished;
         pid_t m_pid; // ?????
         public:
-            JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid);
+            JobEntry(bool is_stopped, unsigned int id,Command* cmd);
             friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
     };
     // TODO: Add your data members
