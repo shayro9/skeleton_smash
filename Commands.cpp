@@ -79,6 +79,10 @@ void _removeBackgroundSign(char *cmd_line) {
 }
 
 // TODO: Add your implementation for classes in Commands.h
+pid_t Command::GetPid() const {
+    return m_pid;
+}
+
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
@@ -170,7 +174,8 @@ void ExternalCommand :: execute(){
 
 
 void ShowPidCommand::execute() {
-    cout <<"smash pid is " << m_pid << endl;
+    pid_t pid = GetPid();
+    cout <<"smash pid is " << pid << endl;
 }
 
 void ChangePrompt::execute() {
@@ -187,11 +192,6 @@ void ChangePrompt::execute() {
 /////////////////////////////////////////
 
 JobsList::JobsList(){}
-
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
-    return os;
-}
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = *(--m_max_ids.end());
@@ -210,7 +210,7 @@ void JobsList :: printJobsList(){
 
 void JobsList :: killAllJobs(){
     for(auto i : m_jobs){
-        kill();
+        removeJobById(i.first);
     }
 }
 
@@ -219,11 +219,16 @@ void JobsList :: removeFinishedJobs(){
 }
 
 JobsList ::JobEntry* JobsList :: getJobById(int jobId){
-    return &(m_jobs.find(unsigned int(jobId))->second);
+    return &(m_jobs.find((unsigned int)jobId)->second);
 }
 
 void JobsList :: removeJobById(int jobId){
-//SHAY
+    JobEntry job = m_jobs.find(jobId)->second;
+    const Command* cmd = job.GetCommand();
+    pid_t pid = cmd->GetPid();
+    if(kill(SIGKILL, pid)) {
+        cout << "FAILED TO KILL" << endl;
+    }
 }
 
 JobsList::JobEntry *getLastJob(int *lastJobId){
@@ -234,11 +239,17 @@ JobsList::JobEntry *getLastStoppedJob(int *jobId){
 //nitaY
 
 }
-// TODO: Add extra methods or modify exisitng ones as needed
-
 
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
 
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd;
+    return os;
+}
+
+const Command *JobsList::JobEntry::GetCommand() const {
+    return m_cmd;
+}
 
 
 /// @brief ///////////////////////////////
