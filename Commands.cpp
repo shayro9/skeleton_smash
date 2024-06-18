@@ -39,15 +39,13 @@ string _trim(const std::string &s) {
     return _rtrim(_ltrim(s));
 }
 
-int _parseCommandLine(const char *cmd_line, char **args) {
+int _parseCommandLine(const char *cmd_line, vector<string>& args) {
     FUNC_ENTRY()
     int i = 0;
     std::istringstream iss(_trim(string(cmd_line)).c_str());
     for (std::string s; iss >> s;) {
-        args[i] = (char *) malloc(s.length() + 1);
-        memset(args[i], 0, s.length() + 1);
-        strcpy(args[i], s.c_str());
-        args[++i] = NULL;
+        args.push_back(s);
+        ++i;
     }
     return i;
 
@@ -74,7 +72,7 @@ void _removeBackgroundSign(char *cmd_line) {
     // replace the & (background sign) with space and then remove all tailing spaces.
     cmd_line[idx] = ' ';
     // truncate the command line string up to the last non-space character
-    cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
+    cmd_line[str.find_last_not_of(WHITESPACE, idx)] = 0;
 }
 
 // TODO: Add your implementation for classes in Commands.h
@@ -88,27 +86,34 @@ ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 //ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 KillCommand::KillCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line){
     string cmd_s = _trim(string(m_cmd));
-    string arguments = _trim(cmd_s.substr(cmd_s.find_first_of(" &\n")));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+
+    if(args_num - 1 != 2)
+        throw invalid_argument("smash error: kill: invalid arguments");
+    if(args[1][0] != '-')
+        throw invalid_argument("smash error: kill: invalid arguments");
     try {
-        int flag_loc = arguments.find_first_of('-');
-        int separator = arguments.find_first_of(" ");
-        if(flag_loc == -1 || separator == -1)
-            throw invalid_argument("smash error: kill: invalid arguments");
-        try {
-            m_signum = stoi(arguments.substr(flag_loc + 1, separator - 1));
-            m_jobId = stoi(arguments.substr(separator + 1, arguments.find_first_of(" &\n")));
-        }
-        catch (...) {
-            throw invalid_argument("smash error: kill: invalid arguments");
-        }
-        m_job = jobs->getJobById(m_jobId);
-        if (!m_job){
-            throw invalid_argument("smash error: kill: job-id " + to_string(m_jobId) + " does not exist");
-        }
+        m_signum = stoi(args[1].substr(1));
+        m_jobId = stoi(args[2]);
     }
-    catch (const exception& e){
-        cout << e.what() << endl;
+    catch (...) {
+        throw invalid_argument("smash error: kill: invalid arguments");
     }
+    m_jobs = jobs;
+    JobsList::JobEntry* job = jobs->getJobById(m_jobId);
+    if (job == nullptr){
+        throw invalid_argument("smash error: kill: job-id " + to_string(m_jobId) + " does not exist");
+    }
+}
+QuitCommand::QuitCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    _parseCommandLine(cmd_s.c_str(), args);
+    m_2kill = false;
+    for(string& arg : args)
+        if (arg == "kill")
+            m_2kill = true;
 }
 
 void GetCurrDirCommand::execute() {
@@ -116,7 +121,6 @@ void GetCurrDirCommand::execute() {
     getcwd(path, PATH_MAX);
     cout << path << endl;
 }
-
 //bool checkValid(const string& line){
 //    std::string str(line);
 //    std::string argument = str.substr(3);
@@ -152,12 +156,10 @@ void GetCurrDirCommand::execute() {
 //    }
 //    this->m_lastPwd = string(former_path);
 //}
-
 void ShowPidCommand::execute() {
     pid_t pid = GetPid();
     cout <<"smash pid is " << pid << endl;
 }
-
 void ChangePrompt::execute() {
     string cmd_s = _trim(string(m_cmd));
     string prompt;
@@ -168,14 +170,22 @@ void ChangePrompt::execute() {
         prompt = "";
     SmallShell::getInstance().SetPrompt(prompt);
 }
-
 void KillCommand::execute() {
 //    if(kill(m_signum, m_jobId)){
 //        //TODO use perror failed
 //    }
 
+    m_jobs->removeJobById(m_jobId);
+
     //GetPid is wrong
     cout << "signal number " << m_signum << " was sent to pid " << GetPid() << endl;
+}
+
+void QuitCommand::execute() {
+    if (m_2kill) {
+        m_jobs->killAllJobs();
+        //TODO: print (maybe in kill all)
+    }
 }
 
 /////////////////////////////////////////
@@ -238,6 +248,7 @@ void JobsList :: printJobsList(){
 }
 
 void JobsList :: killAllJobs(){
+    removeFinishedJobs();
     for(auto i : m_jobs){
         removeJobById(i.first);
     }
@@ -253,12 +264,7 @@ JobsList ::JobEntry* JobsList :: getJobById(int jobId){
 }
 
 void JobsList :: removeJobById(int jobId){
-//    JobEntry job = m_jobs.find(jobId)->second;
-//    const Command* cmd = job.GetCommand();
-//    pid_t pid = cmd->GetPid();
-//    if(kill(SIGKILL, pid)) {
-//        cout << "FAILED TO KILL" << endl;
-//    }
+
 }
 
 JobsList::JobEntry *getLastJob(int *lastJobId){
@@ -310,7 +316,9 @@ void SmallShell::SetPrompt(const string& prompt){
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
     string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of("& \n"));
+    bool is_bg = _isBackgroundComamnd(cmd_line);
+    _removeBackgroundSign(&cmd_s[0]);
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
@@ -336,7 +344,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
-     Command* cmd = CreateCommand(cmd_line);
-     cmd->execute();
+    try {
+        Command* cmd = CreateCommand(cmd_line);
+        cmd->execute();
+    }
+    catch (const exception& e){
+        cout << e.what() << endl;
+    }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
 }

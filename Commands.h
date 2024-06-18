@@ -119,7 +119,9 @@ public:
 class JobsList;
 
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+private:
+    JobsList* m_jobs;
+    bool m_2kill;
     QuitCommand(const char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() {}
@@ -182,7 +184,7 @@ class KillCommand : public BuiltInCommand {
 private:
     unsigned int m_signum;
     unsigned int m_jobId;
-    JobsList::JobEntry* m_job;
+    JobsList* m_jobs;
 public:
     KillCommand(const char *cmd_line, JobsList *jobs);
 
