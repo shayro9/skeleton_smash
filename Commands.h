@@ -26,6 +26,7 @@ public:
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
     pid_t GetPid() const;
+    friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
 class BuiltInCommand : public Command {
@@ -86,8 +87,7 @@ public:
     friend bool checkValid(const char* line);
     void execute() override;
 };
-//TODO?
-//std :: string ChangeDirCommand :: m_lastPwd;
+std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -142,11 +142,11 @@ public:
         JobEntry(bool is_stopped, unsigned int id,Command* cmd);
         friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
         const Command* GetCommand() const;
+        bool isFinished() const;
     };
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
     std ::set<unsigned int> m_max_ids;
-    int m_last_job_id;
 public:
     JobsList();
 
@@ -172,6 +172,7 @@ public:
 
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* m_jobs;
 public:
     JobsCommand(const char *cmd_line, JobsList *jobs);
 
@@ -194,7 +195,9 @@ public:
 };
 
 class ForegroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
+private:
+    JobsList* m_jobs;
+    unsigned int m_job_id;
 public:
     ForegroundCommand(const char *cmd_line, JobsList *jobs);
 
@@ -244,6 +247,7 @@ class SmallShell {
 private:
     // TODO: Add your data members
     std::string m_prompt;
+    JobsList m_jobsList;
     SmallShell();
 
 public:
