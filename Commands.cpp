@@ -6,7 +6,7 @@
 #include <climits>
 #include <sys/types.h>
 #include <csignal>
-//#include <sys/wait.h>
+#include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
 #include <limits>
@@ -90,7 +90,7 @@ std::ostream& operator<<(std::ostream& os, const Command &cmd){
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
-//ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){}
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs) {
     string cmd_s = _trim(string(m_cmd));
@@ -151,41 +151,41 @@ void GetCurrDirCommand::execute() {
     getcwd(path, PATH_MAX);
     cout << path << endl;
 }
-//bool checkValid(const string& line){
-//    std::string str(line);
-//    std::string argument = str.substr(3);
-//    if (argument.find(' ') != string::npos) {
-//        return false;
-//    }
-//    return true;
-//}
-//void ChangeDirCommand ::execute() {
-//    ///// TO fix this
-//    std :: string new_path;
-//    string line = _trim(this->m_cmd);
-//    if(!checkValid(line)){
-//        //TODO: error
-//        std :: cerr << "error: cd: too many arguments\n";
-//        return;
-//    }
-//    if(line[3] == '-'){
-//        if(_trim(this->m_lastPwd).empty()){
-//            std :: cerr << "error: cd: OLDPWD not set\n";
-//            return;
-//        }
-//        new_path = this->m_lastPwd;
-//    }else{
-//        new_path = this->m_cmd.substr(3, this->m_cmd.size());
-//    }
-//    char former_path[PATH_MAX];
-//    getcwd(former_path, PATH_MAX);
-//    int res = chdir(new_path.c_str());
-//    if(res !=0){
-//        perror("smash error: chdir failed");
-//        return;
-//    }
-//    this->m_lastPwd = string(former_path);
-//}
+bool checkValid(const string& line){
+    std::string str(line);
+    std::string argument = str.substr(3);
+    if (argument.find(' ') != string::npos) {
+        return false;
+    }
+    return true;
+}
+void ChangeDirCommand ::execute() {
+    ///// TO fix this
+    std :: string new_path;
+    string line = _trim(this->m_cmd);
+    if(!checkValid(line)){
+        //TODO: error
+        std :: cerr << "error: cd: too many arguments\n";
+        return;
+    }
+    if(line[3] == '-'){
+        if(_trim(this->m_lastPwd).empty()){
+            std :: cerr << "error: cd: OLDPWD not set\n";
+            return;
+        }
+        new_path = this->m_lastPwd;
+    }else{
+        new_path = this->m_cmd.substr(3, this->m_cmd.size());
+    }
+    char former_path[PATH_MAX];
+    getcwd(former_path, PATH_MAX);
+    int res = chdir(new_path.c_str());
+    if(res !=0){
+        perror("smash error: chdir failed");
+        return;
+    }
+    this->m_lastPwd = string(former_path);
+}
 void ShowPidCommand::execute() {
     pid_t pid = GetPid();
     cout <<"smash pid is " << pid << endl;
@@ -266,14 +266,14 @@ void ExternalCommand :: execute(){
         arguments.push_back(nullptr);
     }
 
-//    int wstatus;
-//    pid_t pid = fork();
-//    if (pid == 0) {
-//        for(auto i : arguments){cout << i << endl;}
-//        execv(arguments[0], const_cast<char* const*>(arguments.data()));
-//    } else {
-//            waitpid(pid, &wstatus, 0);
-//    }
+    int wstatus;
+    pid_t pid = fork();
+    if (pid == 0) {
+        for(auto i : arguments){cout << i << endl;}
+        execv(arguments[0], const_cast<char* const*>(arguments.data()));
+    } else {
+            waitpid(pid, &wstatus, 0);
+    }
 }
 
 /////////////////////////////////////////
@@ -337,12 +337,10 @@ void JobsList :: removeJobById(int jobId){
 }
 
 JobsList::JobEntry *getLastJob(int *lastJobId){
-    //Nitay
     return nullptr;
 }
 
 JobsList::JobEntry *getLastStoppedJob(int *jobId){
-//nitaY
     return nullptr;
 }
 
@@ -407,9 +405,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-//    else if (firstWord.compare("cd") == 0) {
-//        return new ChangeDirCommand(cmd_line);
-//    }
+    else if (firstWord.compare("cd") == 0) {
+        return new ChangeDirCommand(cmd_line);
+    }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
