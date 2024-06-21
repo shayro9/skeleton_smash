@@ -1,5 +1,4 @@
 #include <iostream>
-#include <signal.h>
 #include "signals.h"
 #include "Commands.h"
 

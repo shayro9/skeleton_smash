@@ -26,6 +26,7 @@ public:
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
     pid_t GetPid() const;
+    string GetLine() const;
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
@@ -87,7 +88,7 @@ public:
     friend bool checkValid(const char* line);
     void execute() override;
 };
-std :: string ChangeDirCommand :: m_lastPwd;
+//std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -122,6 +123,7 @@ class QuitCommand : public BuiltInCommand {
 private:
     JobsList* m_jobs;
     bool m_2kill;
+public:
     QuitCommand(const char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() {}
@@ -137,12 +139,13 @@ public:
     private:
         unsigned int m_id;
         bool m_is_finished;
-        const Command* m_cmd;
+        Command* m_cmd;
     public:
         JobEntry(bool is_stopped, unsigned int id,Command* cmd);
         friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
-        const Command* GetCommand() const;
+        Command* GetCommand() const;
         bool isFinished() const;
+        void Done();
     };
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
@@ -168,6 +171,7 @@ public:
 
     JobEntry *getLastStoppedJob(int *jobId);
     // TODO: Add extra methods or modify exisitng ones as needed
+    bool isEmpty() const;
 };
 
 class JobsCommand : public BuiltInCommand {
@@ -266,6 +270,7 @@ public:
 
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
+    void addJob(Command* cmd);
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
 };
