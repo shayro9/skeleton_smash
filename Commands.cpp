@@ -52,9 +52,8 @@ int _parseCommandLine(const char *cmd_line, vector<string>& args) {
     FUNC_EXIT()
 }
 
-bool _isBackgroundComamnd(const char *cmd_line) {
-    const string str(cmd_line);
-    return str[str.find_last_not_of(WHITESPACE)] == '&';
+bool _isBackgroundComamnd(string cmd_line) {
+    return cmd_line[cmd_line.find_last_not_of(WHITESPACE)] == '&';
 }
 
 void _removeBackgroundSign(char *cmd_line) {
@@ -79,6 +78,9 @@ void _removeBackgroundSign(char *cmd_line) {
 pid_t Command::GetPid() const {
     return m_pid;
 }
+string Command::GetLine() const {
+    return m_cmd;
+}
 std::ostream& operator<<(std::ostream& os, const Command &cmd){
     os << cmd.m_cmd;
     return os;
@@ -96,13 +98,18 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : Bui
     int args_num = _parseCommandLine(cmd_s.c_str(), args);
     if (args_num > 2)
         throw invalid_argument("smash error: fg: invalid arguments");
-    if (args_num == 1)
+    if (args_num == 1) {
+        if (m_jobs->isEmpty())
+            throw out_of_range("smash error: fg: jobs list is empty");
         m_job_id = *(--jobs->m_max_ids.end());
-    try{
-        m_job_id = stoi(args[1]);
     }
-    catch (...){
-        throw invalid_argument("smash error: fg: invalid arguments");
+    else{
+        try{
+            m_job_id = stoi(args[1]);
+        }
+        catch (...){
+            throw invalid_argument("smash error: fg: invalid arguments");
+        }
     }
 }
 KillCommand::KillCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line){
@@ -197,20 +204,27 @@ void JobsCommand::execute() {
     m_jobs->printJobsList();
 }
 void ForegroundCommand::execute() {
-    //exe m_job_id
-    //wait
-    //print original line
+    JobsList::JobEntry* job = m_jobs->getJobById((m_job_id));
+    if(job == nullptr){
+        throw invalid_argument("smash error: fg: job-id " + to_string(m_job_id) + " does not exist");
+    }
+    Command* cmd = job->GetCommand();
+    pid_t workingPid = cmd->GetPid();
+    cmd->execute();
+    //waitpid(workingPid);
+    job->Done();
+    cout << cmd->GetLine() << endl;
     //check if id exist and if job isn't empty
 }
 void KillCommand::execute() {
 //    if(kill(m_signum, m_jobId)){
 //        //TODO use perror failed
 //    }
+    pid_t pid = m_jobs->getJobById(m_jobId)->GetCommand()->GetPid();
+    if(m_signum == 9 || m_signum == 3 || m_signum == 1) //TODO: need to check if the signal succeeded? sigs(1 && 3)
+        m_jobs->removeJobById(m_jobId);
 
-    m_jobs->removeJobById(m_jobId);
-
-    //TODO GetPid is wrong
-    cout << "signal number " << m_signum << " was sent to pid " << GetPid() << endl;
+    cout << "signal number " << m_signum << " was sent to pid " << pid << endl;
 }
 void QuitCommand::execute() {
     if (m_2kill) {
@@ -221,50 +235,55 @@ void QuitCommand::execute() {
 
 /////////////////////////////////////////
 
-//ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
-//vector<string> spllitStringByChar(string str, string delim) {
-//        vector<string> res;
-//        int index = str.find_first_of(delim);
-//        while(index != -1){
-//            index = str.find_first_of(delim);
-//            res.push_back(str.substr(0, index));
-//            str = str.substr(index+1, str.size());
-//        }
-//        return res;
-//}
-//void ExternalCommand :: execute(){
-//    std::vector<const char*> arguments;
-//    string line = _trim(this->m_cmd);
-//    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
+ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {
+    if(_isBackgroundComamnd(cmd_line))
+        SmallShell::getInstance().addJob(this);
+}
+vector<string> spllitStringByChar(string str, string delim) {
+        vector<string> res;
+        int index = str.find_first_of(delim);
+        while(index != -1){
+            index = str.find_first_of(delim);
+            res.push_back(str.substr(0, index));
+            str = str.substr(index+1, str.size());
+        }
+        return res;
+}
+void ExternalCommand :: execute(){
+    std::vector<const char*> arguments;
+    string line = _trim(this->m_cmd);
+    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
 //    cout << "got here" << firstWord<< endl;
-//    if(firstWord.find(".") != string::npos){
-//        vector<string> tmp = spllitStringByChar(line, WHITESPACE);
-//        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
-//        arguments.push_back(nullptr);
-//    }
-//    else{
-//        arguments.push_back(("/bin/bash"));
-//        arguments.push_back(("-c"));
-//        arguments.push_back(line.c_str());
-//        arguments.push_back(nullptr);
-//    }
-//
+    if(firstWord.find(".") != string::npos){
+        vector<string> tmp = spllitStringByChar(line, WHITESPACE);
+        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
+        arguments.push_back(nullptr);
+    }
+    else{
+        arguments.push_back(("/bin/bash"));
+        arguments.push_back(("-c"));
+        arguments.push_back(line.c_str());
+        arguments.push_back(nullptr);
+    }
+
 //    int wstatus;
 //    pid_t pid = fork();
 //    if (pid == 0) {
 //        for(auto i : arguments){cout << i << endl;}
 //        execv(arguments[0], const_cast<char* const*>(arguments.data()));
 //    } else {
-//        waitpid(pid, &wstatus, 0);;
+//            waitpid(pid, &wstatus, 0);
 //    }
-//}
+}
 
 /////////////////////////////////////////
 
 JobsList::JobsList(){}
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
-    unsigned int max_id = *(--m_max_ids.end());
+    unsigned int max_id = 0;
+    if(!m_max_ids.empty())
+        max_id = *(--m_max_ids.end());
 
     JobEntry job(isStopped, max_id+1, cmd);
     m_jobs.insert({max_id+1,job});
@@ -274,30 +293,42 @@ void JobsList :: addJob(Command *cmd, bool isStopped){
 void JobsList :: printJobsList(){
     removeFinishedJobs();
     for(auto i : m_jobs){
-        cout << "[" << i.first  << "] " << i.second << endl;
+        cout << "[" << i.first  << "] " << i.second << i.second.GetCommand()->GetPid() << endl;
     }
 }
 
 void JobsList :: killAllJobs(){
     removeFinishedJobs();
     cout << "smash: sending SIGKILL signal to "+ to_string(m_jobs.size()) +" jobs:" << endl;
-    for(auto i : m_jobs){
-        cout << i.second.GetCommand()->GetPid() << ": " << i.second.GetCommand() << endl;
-        removeJobById(i.first);
+    vector<int> ids;
+    std::copy(m_max_ids.begin(), m_max_ids.end(), back_inserter(ids));
+    for (auto i : ids){
+        JobEntry* temp_job = &m_jobs.find(i)->second;
+        Command* temp_cmd = temp_job->GetCommand();
+        cout << temp_cmd->GetPid() << ": " << temp_cmd->GetLine() << endl;
+        temp_job->Done();
     }
+    removeFinishedJobs();
 }
 
 void JobsList :: removeFinishedJobs(){
-    for (auto i : m_jobs){
-        if (i.second.isFinished()){
-            removeJobById(i.first);
+    vector<int> ids;
+    std::copy(m_max_ids.begin(), m_max_ids.end(), back_inserter(ids));
+    for (auto i : ids){
+        auto it = m_jobs.find(i);
+        if (it != m_jobs.end()){
+            if(it->second.isFinished())
+                removeJobById(i);
         }
     }
 }
 
 JobsList ::JobEntry* JobsList :: getJobById(int jobId){
-    return &(m_jobs.find((unsigned int) jobId)->second);
-    return nullptr;
+    auto it = m_jobs.find((unsigned int) jobId);
+    if(it == m_jobs.end()){
+        return nullptr;
+    }
+    return &it->second;
 }
 
 void JobsList :: removeJobById(int jobId){
@@ -315,19 +346,27 @@ JobsList::JobEntry *getLastStoppedJob(int *jobId){
     return nullptr;
 }
 
+bool JobsList::isEmpty() const {
+    return m_jobs.empty();
+}
+
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
 
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
+    os << job.m_cmd->GetLine();
     return os;
 }
 
-const Command *JobsList::JobEntry::GetCommand() const {
+Command *JobsList::JobEntry::GetCommand() const {
     return m_cmd;
 }
 
 bool JobsList::JobEntry::isFinished() const {
     return m_is_finished;
+}
+
+void JobsList::JobEntry::Done() {
+    m_is_finished = true;
 }
 
 
@@ -352,13 +391,16 @@ void SmallShell::SetPrompt(const string& prompt){
         m_prompt = "smash> ";
 }
 
+void SmallShell::addJob(Command* cmd) {
+    m_jobsList.addJob(cmd);
+}
+
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
     string cmd_s = _trim(string(cmd_line));
-    bool is_bg = _isBackgroundComamnd(cmd_line);
     _removeBackgroundSign(&cmd_s[0]);
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
@@ -374,12 +416,20 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "chprompt") {
         return new ChangePrompt(cmd_line);
     }
+    else if (firstWord == "jobs") {
+        return new JobsCommand(cmd_line, &m_jobsList);
+    }
+    else if (firstWord == "fg") {
+        return new ForegroundCommand(cmd_line, &m_jobsList);
+    }
     else if (firstWord == "kill") {
-        return new KillCommand(cmd_line, nullptr);
+        return new KillCommand(cmd_line, &m_jobsList);
+    }
+    else if (firstWord == "quit") {
+        return new QuitCommand(cmd_line, &m_jobsList);
     }
     else {
-        return nullptr;
-//        return new ExternalCommand(cmd_line);
+        return new ExternalCommand(cmd_line);
     }
 }
 
