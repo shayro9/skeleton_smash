@@ -5,9 +5,9 @@
 #include <sstream>
 #include <climits>
 #include <sys/types.h>
+#include <csignal>
 #include <sys/resource.h>
 #include <regex>
-#include <csignal>
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"

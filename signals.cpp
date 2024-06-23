@@ -1,6 +1,8 @@
 #include <iostream>
 #include "signals.h"
 #include "Commands.h"
+#include <sys/types.h>
+#include <csignal>
 
 using namespace std;
 
