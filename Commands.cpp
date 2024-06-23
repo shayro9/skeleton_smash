@@ -206,13 +206,16 @@ void ForegroundCommand::execute() {
     if(job == nullptr){
         throw invalid_argument("smash error: fg: job-id " + to_string(m_job_id) + " does not exist");
     }
+    SmallShell &smash = SmallShell::getInstance();
     Command* cmd = job->GetCommand();
     pid_t workingPid = job->Getpid();
     cmd->execute();
     int status;
 
+    smash.setWorkingPid(workingPid);
     waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
+    smash.setWorkingPid(-1);
 }
 void KillCommand::execute() {
     pid_t pid = m_jobs->getJobById(m_jobId)->Getpid();
