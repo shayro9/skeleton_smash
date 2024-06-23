@@ -152,7 +152,6 @@ public:
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
     std ::set<unsigned int> m_max_ids;
-    int m_last_job_id;
 public:
     JobsList();
 
@@ -284,7 +283,6 @@ public:
 
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
-    void addJob(Command* cmd);
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
 };
