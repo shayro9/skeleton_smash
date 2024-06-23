@@ -14,10 +14,12 @@ using namespace std;
 vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 class Command {
 // TODO: Add your data members
+private:
+    const pid_t m_pid;
 protected:
     const std::string m_cmd;
 public:
-    Command(const char *cmd_line) : m_cmd(cmd_line) {}
+    Command(const char *cmd_line) : m_cmd(cmd_line), m_pid(getpid()) {}
 
     virtual ~Command() {}
 
@@ -25,6 +27,9 @@ public:
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
+    pid_t GetPid() const;
+    string GetLine() const;
+    friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
 class BuiltInCommand : public Command {
@@ -85,6 +90,7 @@ public:
     friend bool checkValid(const char* line);
     void execute() override;
 };
+//TODO?
 std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
@@ -117,7 +123,10 @@ public:
 class JobsList;
 
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+private:
+    JobsList* m_jobs;
+    bool m_2kill;
+public:
     QuitCommand(const char *cmd_line, JobsList *jobs);
 
     virtual ~QuitCommand() {}
@@ -130,18 +139,20 @@ class JobsList {
 public:
     class JobEntry {
         // TODO: Add your data members
+    private:
         unsigned int m_id;
-        const Command* m_cmd;
         bool m_is_finished;
-        pid_t m_pid; // ?????
-        public:
-            JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid);
-            friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
+        Command* m_cmd;
+    public:
+        JobEntry(bool is_stopped, unsigned int id,Command* cmd);
+        friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
+        Command* GetCommand() const;
+        bool isFinished() const;
+        void Done();
     };
     // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
     std ::set<unsigned int> m_max_ids;
-    int m_last_job_id;
 public:
     JobsList();
 
@@ -163,10 +174,12 @@ public:
 
     JobEntry *getLastStoppedJob(int *jobId);
     // TODO: Add extra methods or modify exisitng ones as needed
+    bool isEmpty() const;
 };
 
 class JobsCommand : public BuiltInCommand {
     // TODO: Add your data members
+    JobsList* m_jobs;
 public:
     JobsCommand(const char *cmd_line, JobsList *jobs);
 
@@ -176,7 +189,10 @@ public:
 };
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
+private:
+    unsigned int m_signum;
+    unsigned int m_jobId;
+    JobsList* m_jobs;
 public:
     KillCommand(const char *cmd_line, JobsList *jobs);
 
@@ -186,7 +202,9 @@ public:
 };
 
 class ForegroundCommand : public BuiltInCommand {
-    // TODO: Add your data members
+private:
+    JobsList* m_jobs;
+    unsigned int m_job_id;
 public:
     ForegroundCommand(const char *cmd_line, JobsList *jobs);
 
@@ -248,6 +266,7 @@ private:
     // TODO: Add your data members
     std::string m_prompt;
     aliasCommand_DS m_aliasDS;
+    JobsList m_jobsList;
     SmallShell();
 
 public:
