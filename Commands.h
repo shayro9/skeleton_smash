@@ -87,7 +87,7 @@ public:
     void execute() override;
 };
 //TODO?
-std :: string ChangeDirCommand :: m_lastPwd;
+//std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -265,6 +265,7 @@ private:
     std::string m_prompt;
     aliasCommand_DS m_aliasDS;
     JobsList m_jobsList;
+    Command* m_fgCommand;
     SmallShell();
 
 public:
@@ -285,6 +286,7 @@ public:
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
     void addJob(Command* cmd);
+    bool isWaiting() const;
 };
 
 #endif //SMASH_COMMAND_H_

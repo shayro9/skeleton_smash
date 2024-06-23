@@ -210,6 +210,7 @@ void ForegroundCommand::execute() {
     pid_t workingPid = job->Getpid();
     cmd->execute();
     int status;
+
     waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
 }
@@ -336,9 +337,8 @@ void JobsList :: killAllJobs(){
         JobEntry* temp_job = &m_jobs.find(i)->second;
         Command* temp_cmd = temp_job->GetCommand();
         cout << temp_job->Getpid() << ": " << temp_cmd->GetLine() << endl;
-        temp_job->Done();
+        kill(temp_job->Getpid(), SIGKILL);
     }
-    removeFinishedJobs();
 }
 
 void JobsList :: removeFinishedJobs(){
@@ -471,10 +471,16 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // for example:
     try {
         Command* cmd = CreateCommand(cmd_line);
+        m_fgCommand = cmd;
         cmd->execute();
+        m_fgCommand = nullptr;
     }
     catch (const exception& e){
         cout << e.what() << endl;
     }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+bool SmallShell::isWaiting() const {
+    return m_fgCommand != nullptr;
 }
