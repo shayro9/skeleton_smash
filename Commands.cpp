@@ -226,7 +226,8 @@ void unaliasCommand :: execute(){
 
 
 RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-
+    int former_std_fd = dup(STDOUT)
+    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 }
 
 void RedirectionCommand :: execute(){}
