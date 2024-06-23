@@ -1,6 +1,9 @@
+#ifndef SMASH_INCLUDE
+#define SMASH_INCLUDE
+
 #include <iostream>
 #include <unistd.h>
-//#include <sys/wait.h>
+#include <sys/wait.h>
 #include <csignal>
 #include "Commands.h"
 #include "signals.h"
@@ -23,3 +26,4 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
+#endif //SMASH_INCLUDE

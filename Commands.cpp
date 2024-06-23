@@ -6,6 +6,7 @@
 #include <climits>
 #include <sys/types.h>
 #include <sys/resource.h>
+#include <regex>
 #include <csignal>
 #include <sys/wait.h>
 #include <iomanip>
@@ -75,9 +76,6 @@ void _removeBackgroundSign(char *cmd_line) {
 }
 
 // TODO: Add your implementation for classes in Commands.h
-pid_t Command::GetPid() const {
-    return m_pid;
-}
 string Command::GetLine() const {
     return m_cmd;
 }
@@ -90,7 +88,7 @@ std::ostream& operator<<(std::ostream& os, const Command &cmd){
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+//ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){}
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs) {
     string cmd_s = _trim(string(m_cmd));
@@ -159,35 +157,35 @@ bool checkValid(const string& line){
     }
     return true;
 }
-void ChangeDirCommand ::execute() {
-    ///// TO fix this
-    std :: string new_path;
-    string line = _trim(this->m_cmd);
-    if(!checkValid(line)){
-        //TODO: error
-        std :: cerr << "error: cd: too many arguments\n";
-        return;
-    }
-    if(line[3] == '-'){
-        if(_trim(this->m_lastPwd).empty()){
-            std :: cerr << "error: cd: OLDPWD not set\n";
-            return;
-        }
-        new_path = this->m_lastPwd;
-    }else{
-        new_path = this->m_cmd.substr(3, this->m_cmd.size());
-    }
-    char former_path[PATH_MAX];
-    getcwd(former_path, PATH_MAX);
-    int res = chdir(new_path.c_str());
-    if(res !=0){
-        perror("smash error: chdir failed");
-        return;
-    }
-    this->m_lastPwd = string(former_path);
-}
+//void ChangeDirCommand ::execute() {
+//    ///// TO fix this
+//    std :: string new_path;
+//    string line = _trim(this->m_cmd);
+//    if(!checkValid(line)){
+//        //TODO: error
+//        std :: cerr << "error: cd: too many arguments\n";
+//        return;
+//    }
+//    if(line[3] == '-'){
+//        if(_trim(this->m_lastPwd).empty()){
+//            std :: cerr << "error: cd: OLDPWD not set\n";
+//            return;
+//        }
+//        new_path = this->m_lastPwd;
+//    }else{
+//        new_path = this->m_cmd.substr(3, this->m_cmd.size());
+//    }
+//    char former_path[PATH_MAX];
+//    getcwd(former_path, PATH_MAX);
+//    int res = chdir(new_path.c_str());
+//    if(res !=0){
+//        perror("smash error: chdir failed");
+//        return;
+//    }
+//    this->m_lastPwd = string(former_path);
+//}
 void ShowPidCommand::execute() {
-    pid_t pid = GetPid();
+    pid_t pid = getpid();
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
@@ -209,18 +207,17 @@ void ForegroundCommand::execute() {
         throw invalid_argument("smash error: fg: job-id " + to_string(m_job_id) + " does not exist");
     }
     Command* cmd = job->GetCommand();
-    pid_t workingPid = cmd->GetPid();
+    pid_t workingPid = job->Getpid();
     cmd->execute();
-    //waitpid(workingPid);
-    job->Done();
+    int status;
+    waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
-    //check if id exist and if job isn't empty
 }
 void KillCommand::execute() {
-//    if(kill(m_signum, m_jobId)){
-//        //TODO use perror failed
-//    }
-    pid_t pid = m_jobs->getJobById(m_jobId)->GetCommand()->GetPid();
+    pid_t pid = m_jobs->getJobById(m_jobId)->Getpid();
+    if(kill(pid, m_signum)){
+        //TODO use perror failed
+    }
     if(m_signum == 9 || m_signum == 3 || m_signum == 1) //TODO: need to check if the signal succeeded? sigs(1 && 3)
         m_jobs->removeJobById(m_jobId);
 
@@ -235,10 +232,7 @@ void QuitCommand::execute() {
 
 /////////////////////////////////////////
 
-ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {
-    if(_isBackgroundComamnd(cmd_line))
-        SmallShell::getInstance().addJob(this);
-}
+ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
 vector<string> spllitStringByChar(string str, string delim) {
         vector<string> res;
         int index = str.find_first_of(delim);
@@ -252,9 +246,9 @@ vector<string> spllitStringByChar(string str, string delim) {
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
-    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
-//    cout << "got here" << firstWord<< endl;
-    if(firstWord.find(".") != string::npos){
+    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));
+
+    if(firstWord.find('.') != string::npos){
         vector<string> tmp = spllitStringByChar(line, WHITESPACE);
         for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
@@ -265,84 +259,56 @@ void ExternalCommand :: execute(){
         arguments.push_back(line.c_str());
         arguments.push_back(nullptr);
     }
-
     int wstatus;
     pid_t pid = fork();
     if (pid == 0) {
         for(auto i : arguments){cout << i << endl;}
         execv(arguments[0], const_cast<char* const*>(arguments.data()));
     } else {
-        waitpid(pid, &wstatus, 0);;
+        waitpid(pid, &wstatus, 0);
     }
 }
-
-
-void ShowPidCommand::execute() {
-    pid_t pid;
-    pid = getpid();
-    cout <<"smash pid is " << pid << endl;
-}
-
-void ChangePrompt::execute() {
-    string cmd_s = _trim(string(m_cmd));
-    string prompt;
-    int firstSpace = cmd_s.find_first_of(WHITESPACE);
-    if (firstSpace > 0)
-        prompt = cmd_s.substr( firstSpace + 1, cmd_s.find_first_of(" \n"));
-    else
-        prompt = "";
-    SmallShell::getInstance().SetPrompt(prompt);
-}
-
  
-aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-void aliasCommand:: execute(){
-    string line = _trim(string(m_cmd));
-    if(line =="alias"){
-        m_aliasDS->print_alias_command();
-        return;
-    }
-    regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
-    if(regex_match(line, reg) == false){
-        throw std::invalid_argument("smash error: alias: invalid alias format");
-    }
-    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
-    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-    m_aliasDS->add_alias_command(name, command);//removing quotes from the command
-}
-
-unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-
-void unaliasCommand :: execute(){
-    char **args;
-    int size = _parseCommandLine(m_cmd.c_str(), args);
-    for(int i = 0 ; i < size; i++){
-        try{
-        m_aliasDS->remove_alias_command(string(args[i]));
-        }catch(const std :: exception& e){
-            for(int j = 0 ;j < size; j++){free(args[j]);}
-            throw e;
-        }
-    }
-    for(int j = 0 ;j < size; j++){free(args[j]);}
-}
+//aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
+//void aliasCommand:: execute(){
+//    string line = _trim(string(m_cmd));
+//    if(line =="alias"){
+//        m_aliasDS->print_alias_command();
+//        return;
+//    }
+//    regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
+//    if(regex_match(line, reg) == false){
+//        throw std::invalid_argument("smash error: alias: invalid alias format");
+//    }
+//    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
+//    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
+//    m_aliasDS->add_alias_command(name, command);//removing quotes from the command
+//}
+//
+//unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
+//
+//void unaliasCommand :: execute(){
+//    vector<string> args;
+//    int size = _parseCommandLine(m_cmd.c_str(), args);
+//    for(int i = 0 ; i < size; i++){
+//        try{
+//        m_aliasDS->remove_alias_command(string(args[i]));
+//        }catch(const std :: exception& e){
+//            throw e;
+//        }
+//    }
+//}
 
 
-RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-    int former_std_fd = dup(STDOUT)
-    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-}
-
-void RedirectionCommand :: execute(){}
+//RedirectionCommand :: RedirectionCommand(const char *cmd_line){
+//    int former_std_fd = dup(STDOUT)
+//    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+//}
+//
+//void RedirectionCommand :: execute(){}
 /////////////////////////////////////////
 
 JobsList::JobsList(){}
-
-
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
-    return os;
-}
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = 0;
@@ -369,7 +335,7 @@ void JobsList :: killAllJobs(){
     for (auto i : ids){
         JobEntry* temp_job = &m_jobs.find(i)->second;
         Command* temp_cmd = temp_job->GetCommand();
-        cout << temp_cmd->GetPid() << ": " << temp_cmd->GetLine() << endl;
+        cout << temp_job->Getpid() << ": " << temp_cmd->GetLine() << endl;
         temp_job->Done();
     }
     removeFinishedJobs();
@@ -378,10 +344,11 @@ void JobsList :: killAllJobs(){
 void JobsList :: removeFinishedJobs(){
     vector<int> ids;
     std::copy(m_max_ids.begin(), m_max_ids.end(), back_inserter(ids));
+    int status;
     for (auto i : ids){
         auto it = m_jobs.find(i);
         if (it != m_jobs.end()){
-            if(it->second.isFinished())
+            if(waitpid(it->second.Getpid(), &status, WNOHANG))
                 removeJobById(i);
         }
     }
@@ -412,7 +379,7 @@ bool JobsList::isEmpty() const {
     return m_jobs.empty();
 }
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
 
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd->GetLine();
@@ -429,6 +396,10 @@ bool JobsList::JobEntry::isFinished() const {
 
 void JobsList::JobEntry::Done() {
     m_is_finished = true;
+}
+
+pid_t JobsList::JobEntry::Getpid() const {
+    return m_pid;
 }
 
 
@@ -469,9 +440,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-    else if (firstWord.compare("cd") == 0) {
-        return new ChangeDirCommand(cmd_line);
-    }
+//    else if (firstWord == "cd") {
+//        return new ChangeDirCommand(cmd_line);
+//    }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
