@@ -81,14 +81,14 @@ GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
     getcwd(path, PATH_MAX);
     cout << path << endl;
 }
-
-
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 bool checkValid(const string& line){
     std::string str(line);
@@ -244,14 +244,16 @@ void JobsList :: addJob(Command *cmd, bool isStopped){
 }
 
 void JobsList :: printJobsList(){
-    //TO DO: Delte the finished jobs - shay
+    //TODO: Delete the finished jobs - shay
     for(auto i : m_jobs){
         cout << "[" << i.first  << "] " << i.second << endl;
     }
 }
 
 void JobsList :: killAllJobs(){
-//Shay
+    for(auto i : m_jobs){
+
+    }
 }
 
 void JobsList :: removeFinishedJobs(){
