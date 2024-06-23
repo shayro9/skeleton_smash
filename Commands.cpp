@@ -262,12 +262,15 @@ void ExternalCommand :: execute(){
     }
     int wstatus;
     pid_t pid = fork();
+    SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
         for(auto i : arguments){cout << i << endl;}
         execv(arguments[0], const_cast<char* const*>(arguments.data()));
     } else {
+        smash.setWorkingPid(pid);
         waitpid(pid, &wstatus, 0);
+        smash.setWorkingPid(-1);
     }
 }
  
@@ -472,9 +475,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
     // for example:
     try {
         Command* cmd = CreateCommand(cmd_line);
-        m_fgCommand = cmd;
         cmd->execute();
-        m_fgCommand = nullptr;
     }
     catch (const exception& e){
         cout << e.what() << endl;
@@ -483,5 +484,13 @@ void SmallShell::executeCommand(const char *cmd_line) {
 }
 
 bool SmallShell::isWaiting() const {
-    return m_fgCommand != nullptr;
+    return m_fgPid != -1;
+}
+
+void SmallShell::setWorkingPid(pid_t pid) {
+    m_fgPid = pid;
+}
+
+pid_t SmallShell::getWorkingPid() const {
+    return m_fgPid;
 }

@@ -9,8 +9,9 @@ using namespace std;
 
 void ctrlCHandler(int sig_num) {
     cout << "smash: got ctrl-C" << endl;
-    if(SmallShell::getInstance().isWaiting()){
-        pid_t pid = getpid();
+    SmallShell &smash = SmallShell::getInstance();
+    if(smash.isWaiting()){
+        pid_t pid = smash.getWorkingPid();
         kill(pid, SIGKILL);
         cout << "smash: process "+ to_string(pid) + " was killed." << endl;
     }

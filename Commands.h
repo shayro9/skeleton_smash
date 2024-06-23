@@ -265,7 +265,7 @@ private:
     std::string m_prompt;
     aliasCommand_DS m_aliasDS;
     JobsList m_jobsList;
-    Command* m_fgCommand;
+    pid_t m_fgPid;
     SmallShell();
 
 public:
@@ -286,6 +286,8 @@ public:
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
     void addJob(Command* cmd);
+    void setWorkingPid(pid_t pid);
+    pid_t getWorkingPid() const;
     bool isWaiting() const;
 };
 
