@@ -3,6 +3,7 @@
 #include "Commands.h"
 #include <sys/types.h>
 #include <csignal>
+#include <unistd.h>
 
 using namespace std;
 

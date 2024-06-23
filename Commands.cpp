@@ -263,6 +263,7 @@ void ExternalCommand :: execute(){
     int wstatus;
     pid_t pid = fork();
     if (pid == 0) {
+        setpgrp();
         for(auto i : arguments){cout << i << endl;}
         execv(arguments[0], const_cast<char* const*>(arguments.data()));
     } else {
