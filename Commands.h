@@ -10,6 +10,8 @@
 #include <set>
 
 using namespace std;
+
+vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 class Command {
 // TODO: Add your data members
 protected:
@@ -211,18 +213,29 @@ public:
     void execute() override;
 };
 
+class aliasCommand_DS{
+    std :: vector<pair<std::string,std::string>> m_alias;
+    public:
+    void add_alias_command(std :: string name, std::string command);
+    void remove_alias_command(std :: string name);
+    void print_alias_command();
+    bool checkInAlias(std::string alias);
+    std::string TranslateAlias(std::string alias);
+};
+
+
 class aliasCommand : public BuiltInCommand {
+    aliasCommand_DS *m_aliasDS;
 public:
-    aliasCommand(const char *cmd_line);
-
+    aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS);
     virtual ~aliasCommand() {}
-
     void execute() override;
 };
 
 class unaliasCommand : public BuiltInCommand {
+    aliasCommand_DS *m_aliasDS;
 public:
-    unaliasCommand(const char *cmd_line);
+    unaliasCommand(const char *cmd_line ,aliasCommand_DS *aliasDS);
 
     virtual ~unaliasCommand() {}
 
@@ -234,11 +247,11 @@ class SmallShell {
 private:
     // TODO: Add your data members
     std::string m_prompt;
+    aliasCommand_DS m_aliasDS;
     SmallShell();
 
 public:
     Command *CreateCommand(const char *cmd_line);
-
     SmallShell(SmallShell const &) = delete; // disable copy ctor
     void operator=(SmallShell const &) = delete; // disable = operator
     static SmallShell &getInstance() // make SmallShell singleton
