@@ -205,7 +205,7 @@ void ChangeDirCommand ::execute() {
 }
 void ShowPidCommand::execute() {
     pid_t pid;
-    pid = syscall(SYS_gettid);
+    pid = getpid();
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
