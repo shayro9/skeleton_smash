@@ -339,7 +339,7 @@ void GetUserCommand::execute() {
     if (grp_entry != nullptr) {
         groupName = grp_entry->gr_name;
     } else {
-        std::cerr << "Group with ID " << gid << " not found." << std::endl;
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
     }
 
     try {
