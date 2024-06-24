@@ -10,16 +10,21 @@
 #include <set>
 
 using namespace std;
+//TODO ?????
+//vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 
-vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
+struct linux_dirent{
+    unsigned long   d_ino;
+    off_t           d_off;
+    unsigned short  d_reclen;
+    char            d_name[];
+};
+
 class Command {
-// TODO: Add your data members
-private:
-    const pid_t m_pid;
 protected:
     const std::string m_cmd;
 public:
-    Command(const char *cmd_line) : m_cmd(cmd_line), m_pid(getpid()) {}
+    Command(const string cmd_line) : m_cmd(cmd_line) {}
 
     virtual ~Command() {}
 
@@ -27,7 +32,6 @@ public:
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
-    pid_t GetPid() const;
     string GetLine() const;
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
@@ -91,7 +95,7 @@ public:
     void execute() override;
 };
 //TODO?
-std :: string ChangeDirCommand :: m_lastPwd;
+//std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -143,10 +147,12 @@ public:
         unsigned int m_id;
         bool m_is_finished;
         Command* m_cmd;
+        pid_t m_pid;
     public:
         JobEntry(bool is_stopped, unsigned int id,Command* cmd);
         friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
         Command* GetCommand() const;
+        pid_t Getpid() const;
         bool isFinished() const;
         void Done();
     };
@@ -214,6 +220,7 @@ public:
 };
 
 class ListDirCommand : public BuiltInCommand {
+    string m_path;
 public:
     ListDirCommand(const char *cmd_line);
 
@@ -267,6 +274,7 @@ private:
     std::string m_prompt;
     aliasCommand_DS m_aliasDS;
     JobsList m_jobsList;
+    pid_t m_fgPid;
     SmallShell();
 
 public:
@@ -286,6 +294,10 @@ public:
     // TODO: add extra methods as needed
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
+    void addJob(Command* cmd);
+    void setWorkingPid(pid_t pid);
+    pid_t getWorkingPid() const;
+    bool isWaiting() const;
 };
 
 #endif //SMASH_COMMAND_H_
