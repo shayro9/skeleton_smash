@@ -9,7 +9,10 @@
 #include <csignal>
 #include <sys/wait.h>
 #include <iomanip>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "Commands.h"
+#include <dirent.h>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -75,9 +78,6 @@ void _removeBackgroundSign(char *cmd_line) {
 }
 
 // TODO: Add your implementation for classes in Commands.h
-pid_t Command::GetPid() const {
-    return m_pid;
-}
 string Command::GetLine() const {
     return m_cmd;
 }
@@ -145,6 +145,22 @@ QuitCommand::QuitCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(
             break;
         }
 }
+ListDirCommand::ListDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        char buffer[PATH_MAX];
+        getcwd(buffer, PATH_MAX);
+        m_path = buffer;
+    }
+    else if(args_num == 2){
+        m_path = args[1];
+    }
+    else{
+        throw invalid_argument("smash error: listdir: too many arguments");
+    }
+}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
@@ -187,7 +203,8 @@ void ChangeDirCommand ::execute() {
     this->m_lastPwd = string(former_path);
 }
 void ShowPidCommand::execute() {
-    pid_t pid = GetPid();
+    pid_t pid;
+    pid = syscall(SYS_gettid);
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
@@ -208,19 +225,22 @@ void ForegroundCommand::execute() {
     if(job == nullptr){
         throw invalid_argument("smash error: fg: job-id " + to_string(m_job_id) + " does not exist");
     }
+    SmallShell &smash = SmallShell::getInstance();
     Command* cmd = job->GetCommand();
-    pid_t workingPid = cmd->GetPid();
+    pid_t workingPid = job->Getpid();
     cmd->execute();
-    //waitpid(workingPid);
-    job->Done();
+    int status;
+
+    smash.setWorkingPid(workingPid);
+    waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
-    //check if id exist and if job isn't empty
+    smash.setWorkingPid(-1);
 }
 void KillCommand::execute() {
-//    if(kill(m_signum, m_jobId)){
-//        //TODO use perror failed
-//    }
-    pid_t pid = m_jobs->getJobById(m_jobId)->GetCommand()->GetPid();
+    pid_t pid = m_jobs->getJobById(m_jobId)->Getpid();
+    if(kill(pid, m_signum)){
+        //TODO use perror failed
+    }
     if(m_signum == 9 || m_signum == 3 || m_signum == 1) //TODO: need to check if the signal succeeded? sigs(1 && 3)
         m_jobs->removeJobById(m_jobId);
 
@@ -232,13 +252,32 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
+void ListDirCommand::execute() {
+    int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
+    if(opened == -1){
+        perror("smash error: could not open directory");
+        return;
+    }
+
+    const int maxRead = 100;
+    char buffer[maxRead];
+    ssize_t bytesRead;
+    if ((bytesRead = read(opened, buffer, maxRead)) > 0) { // Read the directory contents
+        int offset = 0;
+        while (offset < bytesRead) {
+            auto* entry = (struct linux_dirent*)(buffer + offset);
+            string fileName = entry->d_name;
+            if (entry->d_ino != 0 && fileName != "." && fileName != "..") {
+                cout << fileName << endl;
+            }
+            offset += entry->d_reclen;
+        }
+    }
+}
 
 /////////////////////////////////////////
 
-ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {
-    if(_isBackgroundComamnd(cmd_line))
-        SmallShell::getInstance().addJob(this);
-}
+ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
 vector<string> spllitStringByChar(string str, string delim) {
         vector<string> res;
         int index = str.find_first_of(delim);
@@ -268,6 +307,7 @@ void ExternalCommand :: execute(){
     }
     int wstatus;
     pid_t pid = fork();
+    SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         if(_isBackgroundComamnd(line) == true){
             SmallShell::getInstance().addJob()
@@ -275,28 +315,19 @@ void ExternalCommand :: execute(){
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
     } else if(_isBackgroundComamnd(line) == false){
         waitpid(pid, &wstatus, 0);
+=======
+        setpgrp();
+        for(auto i : arguments){cout << i << endl;}
+        execv(arguments[0], const_cast<char* const*>(arguments.data()));
+    } else {
+        smash.setWorkingPid(pid);
+        waitpid(pid, &wstatus, 0);
+        smash.setWorkingPid(-1);
+>>>>>>> eaf653036cb257422a679dd1d541e2c3ff8632f0
     }
 }
-
-
-void ShowPidCommand::execute() {
-    pid_t pid;
-    pid = getpid();
-    cout <<"smash pid is " << pid << endl;
-}
-
-void ChangePrompt::execute() {
-    string cmd_s = _trim(string(m_cmd));
-    string prompt;
-    int firstSpace = cmd_s.find_first_of(WHITESPACE);
-    if (firstSpace > 0)
-        prompt = cmd_s.substr( firstSpace + 1, cmd_s.find_first_of(" \n"));
-    else
-        prompt = "";
-    SmallShell::getInstance().SetPrompt(prompt);
-}
-
  
+<<<<<<< HEAD
 aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
 void aliasCommand:: execute(){
     string line = _trim(string(m_cmd));
@@ -371,19 +402,19 @@ void JobsList :: killAllJobs(){
     for (auto i : ids){
         JobEntry* temp_job = &m_jobs.find(i)->second;
         Command* temp_cmd = temp_job->GetCommand();
-        cout << temp_cmd->GetPid() << ": " << temp_cmd->GetLine() << endl;
-        temp_job->Done();
+        cout << temp_job->Getpid() << ": " << temp_cmd->GetLine() << endl;
+        kill(temp_job->Getpid(), SIGKILL);
     }
-    removeFinishedJobs();
 }
 
 void JobsList :: removeFinishedJobs(){
     vector<int> ids;
     std::copy(m_max_ids.begin(), m_max_ids.end(), back_inserter(ids));
+    int status;
     for (auto i : ids){
         auto it = m_jobs.find(i);
         if (it != m_jobs.end()){
-            if(it->second.isFinished())
+            if(waitpid(it->second.Getpid(), &status, WNOHANG))
                 removeJobById(i);
         }
     }
@@ -414,7 +445,7 @@ bool JobsList::isEmpty() const {
     return m_jobs.empty();
 }
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_cmd(cmd), m_is_finished(is_stopped) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
 
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd->GetLine();
@@ -431,6 +462,10 @@ bool JobsList::JobEntry::isFinished() const {
 
 void JobsList::JobEntry::Done() {
     m_is_finished = true;
+}
+
+pid_t JobsList::JobEntry::Getpid() const {
+    return m_pid;
 }
 
 
@@ -471,9 +506,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-    else if (firstWord.compare("cd") == 0) {
-        return new ChangeDirCommand(cmd_line);
-    }
+//    else if (firstWord == "cd") {
+//        return new ChangeDirCommand(cmd_line);
+//    }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
@@ -508,4 +543,16 @@ void SmallShell::executeCommand(const char *cmd_line) {
         cout << e.what() << endl;
     }
     // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+bool SmallShell::isWaiting() const {
+    return m_fgPid != -1;
+}
+
+void SmallShell::setWorkingPid(pid_t pid) {
+    m_fgPid = pid;
+}
+
+pid_t SmallShell::getWorkingPid() const {
+    return m_fgPid;
 }
