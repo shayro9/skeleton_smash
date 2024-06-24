@@ -13,7 +13,7 @@
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
-
+const int STDOUT = 1;
 #if 0
 #define FUNC_ENTRY()  \
   cout << __PRETTY_FUNCTION__ << " --> " << endl;
@@ -252,27 +252,29 @@ vector<string> spllitStringByChar(string str, string delim) {
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
-    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
-//    cout << "got here" << firstWord<< endl;
-    if(firstWord.find(".") != string::npos){
-        vector<string> tmp = spllitStringByChar(line, WHITESPACE);
-        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
-        arguments.push_back(nullptr);
-    }
-    else{
+    //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
+
+//TO DO : make a call to the function that is described in the notes
+    if(line.find("?") != string::npos || line.find("*") != string::npos){
         arguments.push_back(("/bin/bash"));
         arguments.push_back(("-c"));
         arguments.push_back(line.c_str());
         arguments.push_back(nullptr);
+    }else{
+        vector<string> tmp;
+        _parseCommandLine(this->m_cmd, &tmp);
+        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
+        arguments.push_back(nullptr);
     }
-
     int wstatus;
     pid_t pid = fork();
     if (pid == 0) {
-        for(auto i : arguments){cout << i << endl;}
-        execv(arguments[0], const_cast<char* const*>(arguments.data()));
-    } else {
-        waitpid(pid, &wstatus, 0);;
+        if(_isBackgroundComamnd(line) == true){
+            SmallShell::getInstance().addJob()
+        }
+        execvp(arguments[0], const_cast<char* const*>(arguments.data()));
+    } else if(_isBackgroundComamnd(line) == false){
+        waitpid(pid, &wstatus, 0);
     }
 }
 
@@ -329,11 +331,12 @@ void unaliasCommand :: execute(){
 
 
 RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-    int former_std_fd = dup(STDOUT)
-    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 }
 
-void RedirectionCommand :: execute(){}
+void RedirectionCommand :: execute(){
+    int former_std_fd = dup(STDOUT);
+    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+}
 /////////////////////////////////////////
 
 JobsList::JobsList(){}

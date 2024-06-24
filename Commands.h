@@ -281,11 +281,11 @@ public:
     }
 
     ~SmallShell();
-
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
+    void addJob(Command* cmd);
 };
 
 #endif //SMASH_COMMAND_H_

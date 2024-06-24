@@ -17,3 +17,8 @@ FORK:
     printf("(PID: %d, fork: %d)\n", getpid(), i);
     return 0;
 }
+
+ alias L='sleep '
+ L 10 0&
+ jobs
+ L 100&
