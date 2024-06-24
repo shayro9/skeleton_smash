@@ -15,6 +15,7 @@
 #include "Commands.h"
 #include <dirent.h>
 #include <sys/syscall.h>
+#include <pwd.h>
 
 using namespace std;
 
@@ -164,6 +165,17 @@ ListDirCommand::ListDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) 
         throw invalid_argument("smash error: listdir: too many arguments");
     }
 }
+GetUserCommand::GetUserCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 2){
+        m_targetPid = stoi(args[1]);
+    }
+    else{
+        throw invalid_argument("smash error: listdir: too many arguments");
+    }
+}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
@@ -304,6 +316,17 @@ void ListDirCommand::execute() {
         }
         cout << endl;
     }
+}
+void GetUserCommand::execute() {
+    int grp = getpgid(m_targetPid);
+
+    string procPath = "/proc/" + to_string(m_targetPid);
+    struct stat procStat;
+    stat(procPath.c_str(), &procStat);
+    uid_t uid = procStat.st_uid;
+    struct passwd *pw = getpwuid(uid);
+
+    cout << "User: " << pw->pw_name << endl << "Group: " << grp << endl;
 }
 
 /////////////////////////////////////////

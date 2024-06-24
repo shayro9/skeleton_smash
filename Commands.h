@@ -230,6 +230,7 @@ public:
 };
 
 class GetUserCommand : public BuiltInCommand {
+    pid_t m_targetPid;
 public:
     GetUserCommand(const char *cmd_line);
 
