@@ -295,6 +295,7 @@ void ListDirCommand::execute() {
     }
 
     for (const auto& fileType : filesMap) {
+        if(fileType.second.empty()) continue;
         cout << fileType.first << ": ";
         for(const auto& file : fileType.second){
             cout << file << ", ";
