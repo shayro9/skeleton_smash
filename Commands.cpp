@@ -310,7 +310,7 @@ void aliasCommand:: execute(){
     }
     string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
     string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-    m_aliasDS->add_alias_command(name, command);//removing quotes from the command
+    m_aliasDS->add_alias_command(name, command.substr(1,command.size()-2));// removing quotes from the command
 }
 
 unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
@@ -330,8 +330,7 @@ void unaliasCommand :: execute(){
 }
 
 
-RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-}
+RedirectionCommand :: RedirectionCommand(const char *cmd_line){}
 
 void RedirectionCommand :: execute(){
     int former_std_fd = dup(STDOUT);
