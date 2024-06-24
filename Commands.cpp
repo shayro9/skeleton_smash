@@ -16,6 +16,7 @@
 #include <dirent.h>
 #include <sys/syscall.h>
 #include <pwd.h>
+#include <grp.h>
 
 using namespace std;
 
@@ -329,20 +330,27 @@ string getPidUser(pid_t pid){
 }
 void GetUserCommand::execute() {
     int grp;
+    string userName, groupName;
     if ((grp = getpgid(m_targetPid)) == -1){
         throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
     }
-    string user, group;
+    struct group *grp_entry = getgrgid(grp);
+
+    if (grp_entry != nullptr) {
+        groupName = grp_entry->gr_name;
+    } else {
+        std::cerr << "Group with ID " << gid << " not found." << std::endl;
+    }
+
     try {
-        user = getPidUser(m_targetPid);
-        group = getPidUser(grp);
+        userName = getPidUser(m_targetPid);
     }
     catch (const exception& e){
         throw e;
         return;
     }
 
-    cout << "User: " << user << endl << "Group: " << group << endl;
+    cout << "User: " << userName << endl << "Group: " << groupName << endl;
 }
 
 /////////////////////////////////////////
