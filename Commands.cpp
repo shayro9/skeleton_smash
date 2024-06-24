@@ -9,8 +9,11 @@
 #include <sys/resource.h>
 #include <regex>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <iomanip>
 #include "Commands.h"
+#include <dirent.h>
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -143,6 +146,22 @@ QuitCommand::QuitCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(
             break;
         }
 }
+ListDirCommand::ListDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        char buffer[PATH_MAX];
+        getcwd(buffer, PATH_MAX);
+        m_path = buffer;
+    }
+    else if(args_num == 2){
+        m_path = args[1];
+    }
+    else{
+        throw invalid_argument("smash error: listdir: too many arguments");
+    }
+}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
@@ -157,7 +176,7 @@ bool checkValid(const string& line){
     }
     return true;
 }
-//void ChangeDirCommand ::execute() {
+void ChangeDirCommand ::execute() {
 //    ///// TO fix this
 //    std :: string new_path;
 //    string line = _trim(this->m_cmd);
@@ -183,9 +202,10 @@ bool checkValid(const string& line){
 //        return;
 //    }
 //    this->m_lastPwd = string(former_path);
-//}
+}
 void ShowPidCommand::execute() {
-    pid_t pid = getpid();
+    pid_t pid;
+    pid = syscall(SYS_gettid);
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
@@ -232,6 +252,28 @@ void QuitCommand::execute() {
         m_jobs->killAllJobs();
     }
     exit(0);
+}
+void ListDirCommand::execute() {
+    int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
+    if(opened == -1){
+        perror("smash error: could not open directory");
+        return;
+    }
+
+    const int maxRead = 100;
+    char buffer[maxRead];
+    ssize_t bytesRead;
+    if ((bytesRead = read(opened, buffer, maxRead)) > 0) { // Read the directory contents
+        int offset = 0;
+        while (offset < bytesRead) {
+            auto* entry = (struct linux_dirent*)(buffer + offset);
+            string fileName = entry->d_name;
+            if (entry->d_ino != 0 && fileName != "." && fileName != "..") {
+                cout << fileName << endl;
+            }
+            offset += entry->d_reclen;
+        }
+    }
 }
 
 /////////////////////////////////////////

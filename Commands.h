@@ -12,6 +12,14 @@
 using namespace std;
 //TODO ?????
 //vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
+
+struct linux_dirent{
+    unsigned long   d_ino;
+    off_t           d_off;
+    unsigned short  d_reclen;
+    char            d_name[];
+};
+
 class Command {
 protected:
     const std::string m_cmd;
@@ -212,6 +220,7 @@ public:
 };
 
 class ListDirCommand : public BuiltInCommand {
+    string m_path;
 public:
     ListDirCommand(const char *cmd_line);
 
