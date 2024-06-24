@@ -14,6 +14,8 @@
 #include <iomanip>
 #include "Commands.h"
 #include <dirent.h>
+#include <sys/syscall.h>
+
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -281,7 +283,7 @@ void ListDirCommand::execute() {
     filesMap["directory"] = set<string>();
     filesMap["link"] = set<string>();
 
-    if ((bytesRead = read(opened, buffer, maxRead)) > 0) {
+    if ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
             auto* entry = (struct linux_dirent*)(buffer + offset);
