@@ -537,6 +537,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "listdir") {
+        return new ListDirCommand(cmd_line);
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
