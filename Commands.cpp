@@ -253,6 +253,19 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
+void sortFiles(map<string, set<string>> &map, const char* path, string fileName){
+    struct stat st;
+    lstat(path, &st);
+    if(S_ISREG(st.st_mode)){
+        map["file"].insert(fileName);
+    }
+    else if(S_ISDIR(st.st_mode)){
+        map["directory"].insert(fileName);
+    }
+    else if(S_ISLNK(st.st_mode)){
+        map["link"].insert(fileName);
+    }
+}
 void ListDirCommand::execute() {
     int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(opened == -1){
@@ -263,16 +276,30 @@ void ListDirCommand::execute() {
     const int maxRead = 100;
     char buffer[maxRead];
     ssize_t bytesRead;
-    if ((bytesRead = read(opened, buffer, maxRead)) > 0) { // Read the directory contents
+    map<string ,set<string>> filesMap;
+    filesMap["file"] = set<string>();
+    filesMap["directory"] = set<string>();
+    filesMap["link"] = set<string>();
+
+    if ((bytesRead = read(opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
             auto* entry = (struct linux_dirent*)(buffer + offset);
             string fileName = entry->d_name;
             if (entry->d_ino != 0 && fileName != "." && fileName != "..") {
-                cout << fileName << endl;
+                string fullPath = m_path + "/" + fileName;
+                sortFiles(filesMap, fullPath.c_str(), fileName);
             }
             offset += entry->d_reclen;
         }
+    }
+
+    for (const auto& fileType : filesMap) {
+        cout << fileType.first << ": ";
+        for(const auto& file : fileType.second){
+            cout << file << ", ";
+        }
+        cout << endl;
     }
 }
 
