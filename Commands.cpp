@@ -317,17 +317,32 @@ void ListDirCommand::execute() {
         cout << endl;
     }
 }
-void GetUserCommand::execute() {
-    int grp;
-    string procPath = "/proc/" + to_string(m_targetPid);
+string getPidUser(pid_t pid){
+    string procPath = "/proc/" + to_string(pid);
     struct stat procStat;
-    if((grp = getpgid(m_targetPid)) == -1 || stat(procPath.c_str(), &procStat) == -1) {
-        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    if(stat(procPath.c_str(), &procStat) == -1) {
+        throw invalid_argument("smash error: getuser: process " + to_string(pid) + " does not exist");
     }
     uid_t uid = procStat.st_uid;
     struct passwd *pw = getpwuid(uid);
+    return pw->pw_name;
+}
+void GetUserCommand::execute() {
+    int grp;
+    if ((grp = getpgid(m_targetPid)) == -1){
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
+    string user, group;
+    try {
+        user = getPidUser(m_targetPid);
+        group = getPidUser(grp);
+    }
+    catch (const exception& e){
+        throw e;
+        return;
+    }
 
-    cout << "User: " << pw->pw_name << endl << "Group: " << grp << endl;
+    cout << "User: " << user << endl << "Group: " << group << endl;
 }
 
 /////////////////////////////////////////
