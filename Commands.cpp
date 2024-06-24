@@ -318,11 +318,12 @@ void ListDirCommand::execute() {
     }
 }
 void GetUserCommand::execute() {
-    int grp = getpgid(m_targetPid);
-
+    int grp;
     string procPath = "/proc/" + to_string(m_targetPid);
     struct stat procStat;
-    stat(procPath.c_str(), &procStat);
+    if((grp = getpgid(m_targetPid)) == -1 || stat(procPath.c_str(), &procStat) == -1) {
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
     uid_t uid = procStat.st_uid;
     struct passwd *pw = getpwuid(uid);
 
