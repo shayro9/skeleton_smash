@@ -196,7 +196,7 @@ GetUserCommand::GetUserCommand(const char *cmd_line) : BuiltInCommand(cmd_line) 
         m_targetPid = stoi(args[1]);
     }
     else{
-        throw invalid_argument("smash error: listdir: too many arguments");
+        throw invalid_argument("smash error: getuser: too many arguments");
     }
 }
 WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
@@ -274,6 +274,7 @@ void ShowPidCommand::execute() {
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
+    //TODO: fix
     string cmd_s = _trim(string(m_cmd));
     string prompt;
     int firstSpace = cmd_s.find_first_of(WHITESPACE);
@@ -346,7 +347,7 @@ void ListDirCommand::execute() {
     filesMap["directory"] = set<string>();
     filesMap["link"] = set<string>();
 
-    if ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
+    while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
             auto* entry = (struct linux_dirent*)(buffer + offset);
@@ -368,25 +369,21 @@ void ListDirCommand::execute() {
         cout << endl;
     }
 }
-string getPidUser(pid_t pid){
-    string procPath = "/proc/" + to_string(pid);
+void GetUserCommand::execute() {
+    string procPath = "/proc/" + to_string(m_targetPid) + "/status";
     struct stat procStat;
     if(stat(procPath.c_str(), &procStat) == -1) {
         throw invalid_argument("smash error: getuser: process " + to_string(pid) + " does not exist");
     }
+
     uid_t uid = procStat.st_uid;
     struct passwd *pw = getpwuid(uid);
-    return pw->pw_name;
-}
-void GetUserCommand::execute() {
-    int grp;
-    string userName, groupName;
-    if ((grp = getpgid(m_targetPid)) == -1){
-        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
-    }
+
+    gid_t grp = st_gid;
     struct group *grp_entry = getgrgid(grp);
 
-    if (grp_entry != nullptr) {
+    string userName, groupName;
+    if (grp_entry != NULL) {
         groupName = grp_entry->gr_name;
     } else {
         throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
