@@ -116,7 +116,17 @@ std::ostream& operator<<(std::ostream& os, const Command &cmd){
 
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
-ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        m_prompt = "smash>";
+    }
+    else {
+        m_prompt = args[1];
+    }
+}
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){}
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs) {
@@ -274,15 +284,7 @@ void ShowPidCommand::execute() {
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
-    //TODO: fix
-    string cmd_s = _trim(string(m_cmd));
-    string prompt;
-    int firstSpace = cmd_s.find_first_of(WHITESPACE);
-    if (firstSpace > 0)
-        prompt = cmd_s.substr( firstSpace + 1, cmd_s.find_first_of(" \n"));
-    else
-        prompt = "";
-    SmallShell::getInstance().SetPrompt(prompt);
+    SmallShell::getInstance().SetPrompt(m_prompt);
 }
 void JobsCommand::execute() {
     m_jobs->printJobsList();

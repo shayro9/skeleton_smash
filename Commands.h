@@ -120,6 +120,7 @@ public:
 };
 
 class ChangePrompt : public BuiltInCommand {
+    string m_prompt;
 public:
     ChangePrompt(const char *cmd_line);
 
