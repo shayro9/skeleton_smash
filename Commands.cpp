@@ -336,7 +336,9 @@ void sortFiles(map<string, set<string>> &map, const char* path, string fileName)
 void printKey(string key, set<string> values){
     cout << key << ": ";
     for(const auto& file : values){
-        cout << file << ", ";
+        cout << file;
+        if(values.find(file) != values.end()--)
+            cout << ",";
     }
     cout << endl;
 }
