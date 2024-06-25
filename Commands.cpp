@@ -1,5 +1,7 @@
 #include <unistd.h>
 #include <cstring>
+#include <regex>
+#include <string>
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -15,6 +17,8 @@
 #include <dirent.h>
 using namespace std;
 
+extern std :: string ChangeDirCommand :: m_lastPwd;
+extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 const std::string WHITESPACE = " \n\r\t\f\v";
 const int STDOUT = 1;
 #if 0
@@ -75,6 +79,24 @@ void _removeBackgroundSign(char *cmd_line) {
     cmd_line[idx] = ' ';
     // truncate the command line string up to the last non-space character
     cmd_line[str.find_last_not_of(WHITESPACE, idx)] = 0;
+}
+string _StringRemoveBackgroundSign(const string& cmd_line) {
+    string str(cmd_line);
+    // find last character other than spaces
+    unsigned int idx = str.find_last_not_of(WHITESPACE);
+    // if all characters are spaces then return
+    if (idx == string::npos) {
+        return cmd_line;
+    }
+    // if the command line does not end with & then return
+    if (cmd_line[idx] != '&') {
+        return cmd_line;
+    }
+    // replace the & (background sign) with space and then remove all tailing spaces.
+    str[idx] = ' ';
+    // truncate the command line string up to the last non-space character
+    str[str.find_last_not_of(WHITESPACE, idx)] = 0;
+    return str;
 }
 
 // TODO: Add your implementation for classes in Commands.h
@@ -204,7 +226,7 @@ void ChangeDirCommand ::execute() {
 }
 void ShowPidCommand::execute() {
     pid_t pid;
-    pid = syscall(SYS_gettid);
+    pid = getpid();
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
@@ -301,7 +323,7 @@ void ExternalCommand :: execute(){
         arguments.push_back(nullptr);
     }else{
         vector<string> tmp;
-        _parseCommandLine(this->m_cmd, &tmp);
+        _parseCommandLine(this->m_cmd.c_str(), tmp);
         for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
     }
@@ -310,24 +332,19 @@ void ExternalCommand :: execute(){
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         if(_isBackgroundComamnd(line) == true){
-            SmallShell::getInstance().addJob()
+            //SmallShell::getInstance().addJob();
         }
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
     } else if(_isBackgroundComamnd(line) == false){
         waitpid(pid, &wstatus, 0);
-=======
         setpgrp();
-        for(auto i : arguments){cout << i << endl;}
-        execv(arguments[0], const_cast<char* const*>(arguments.data()));
     } else {
-        smash.setWorkingPid(pid);
-        waitpid(pid, &wstatus, 0);
-        smash.setWorkingPid(-1);
->>>>>>> eaf653036cb257422a679dd1d541e2c3ff8632f0
+        //smash.setWorkingPid(pid);
+        //waitpid(pid, &wstatus, 0);
+        //smash.setWorkingPid(-1);
     }
 }
- 
-<<<<<<< HEAD
+
 aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
 void aliasCommand:: execute(){
     string line = _trim(string(m_cmd));
@@ -341,31 +358,57 @@ void aliasCommand:: execute(){
     }
     string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
     string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-    m_aliasDS->add_alias_command(name, command.substr(1,command.size()-2));// removing quotes from the command
+    m_aliasDS->add_alias_command(name, command);// removing quotes from the command
 }
 
 unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
 
 void unaliasCommand :: execute(){
-    char **args;
+    vector<string> args;
     int size = _parseCommandLine(m_cmd.c_str(), args);
     for(int i = 0 ; i < size; i++){
-        try{
+        //try{
         m_aliasDS->remove_alias_command(string(args[i]));
-        }catch(const std :: exception& e){
-            for(int j = 0 ;j < size; j++){free(args[j]);}
-            throw e;
-        }
+        //}catch(const std :: exception& e){
+          //  for(int j = 0 ;j < size; j++){free(args[j]);}
+            //throw e;
+        //}
     }
-    for(int j = 0 ;j < size; j++){free(args[j]);}
+    //for(int j = 0 ;j < size; j++){free(args[j]);}
 }
 
 
-RedirectionCommand :: RedirectionCommand(const char *cmd_line){}
+RedirectionCommand :: RedirectionCommand(const char *cmd_line) : Command(cmd_line) {}
+
 
 void RedirectionCommand :: execute(){
-    int former_std_fd = dup(STDOUT);
-    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    pid_t pid = fork();
+    if(pid == 0){
+        std ::string line = _trim(_StringRemoveBackgroundSign(this->m_cmd));
+        string file_name = _trim(line.substr(line.find_last_of(">")+1));
+        int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        if (file < 0) {
+            throw std::runtime_error("smash error: open failed");
+        }
+/*        int former_std_fd = dup(STDOUT);
+        if(former_std_fd < 0) {
+            close(file);
+            throw std::runtime_error("smash error: dup failed");
+        }*/
+        if (dup2(file, STDOUT) < 0) {
+            close(file);
+            throw std::runtime_error("smash error: dup2 failed");
+        }
+        SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of(WHITESPACE)).c_str())->execute();
+        close(STDOUT);
+        /*if (dup2(m_std_fd, STDOUT) < 0) {
+            throw std::runtime_error("smash error: dup2 failed");
+        }*/
+        exit(0);
+    }else{
+        int status;
+        waitpid(pid, &status, 0);
+    }
 }
 /////////////////////////////////////////
 
@@ -373,9 +416,14 @@ JobsList::JobsList(){}
 
 
 std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
+    os << job.m_cmd->GetLine();
     return os;
 }
+/*
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd;
+    return os;
+}*/
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = 0;
@@ -447,10 +495,6 @@ bool JobsList::isEmpty() const {
 
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
 
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd->GetLine();
-    return os;
-}
 
 Command *JobsList::JobEntry::GetCommand() const {
     return m_cmd;
@@ -503,12 +547,15 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     _removeBackgroundSign(&cmd_s[0]);
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
+    if(cmd_s.find(">") != string::npos){
+        return new RedirectionCommand(cmd_line);
+    }
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-//    else if (firstWord == "cd") {
-//        return new ChangeDirCommand(cmd_line);
-//    }
+    else if (firstWord == "cd") {
+        return new ChangeDirCommand(cmd_line);
+    }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
@@ -527,6 +574,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "alias"){
+        return new aliasCommand(cmd_line,&m_aliasDS);
+    }
+    else if(this->m_aliasDS.checkInAlias(firstWord)){
+        cout << "Alias command";
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
@@ -535,6 +588,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
+    if(_trim(string(cmd_line)).empty()){
+        return;
+    }
     try {
         Command* cmd = CreateCommand(cmd_line);
         cmd->execute();
@@ -556,3 +612,36 @@ void SmallShell::setWorkingPid(pid_t pid) {
 pid_t SmallShell::getWorkingPid() const {
     return m_fgPid;
 }
+void aliasCommand_DS :: add_alias_command(std :: string name, std::string command){
+    if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
+        throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
+    }
+    m_alias.push_back({name, command});
+}
+void aliasCommand_DS :: remove_alias_command(std :: string name){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&name](const std::pair<std::string, std::string>& p) {
+        return p.first == name;});
+    if (it != m_alias.end()) {
+        m_alias.erase(it);
+    } else { 
+        throw std::invalid_argument( "smash error: unalias: " +name+" alias does not exist");
+    }
+}
+void aliasCommand_DS :: print_alias_command(){
+    for (auto i : m_alias){
+        std ::cout << i.first << "=" << i.second << std::endl;
+    }
+}
+
+bool aliasCommand_DS :: checkInAlias(std::string alias){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
+    return p.first == alias;});
+    return (it != m_alias.end());
+}
+std::string aliasCommand_DS :: TranslateAlias(std::string alias){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
+    return p.first == alias;});
+    return it->second;
+}
+
+
