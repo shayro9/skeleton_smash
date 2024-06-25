@@ -373,13 +373,13 @@ void GetUserCommand::execute() {
     string procPath = "/proc/" + to_string(m_targetPid) + "/status";
     struct stat procStat;
     if(stat(procPath.c_str(), &procStat) == -1) {
-        throw invalid_argument("smash error: getuser: process " + to_string(pid) + " does not exist");
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
     }
 
     uid_t uid = procStat.st_uid;
     struct passwd *pw = getpwuid(uid);
 
-    gid_t grp = st_gid;
+    gid_t grp = procStat.st_gid;
     struct group *grp_entry = getgrgid(grp);
 
     string userName, groupName;
@@ -390,7 +390,7 @@ void GetUserCommand::execute() {
     }
 
     try {
-        userName = getPidUser(m_targetPid);
+        userName = pw->pw_name;
     }
     catch (const exception& e){
         throw e;
