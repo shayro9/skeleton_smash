@@ -161,7 +161,7 @@ public:
         Command* m_cmd;
         pid_t m_pid;
     public:
-        JobEntry(bool is_stopped, unsigned int id,Command* cmd);
+        JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid);
         friend std::ostream& operator<<(std::ostream& os, const JobEntry& job);
         Command* GetCommand() const;
         pid_t Getpid() const;
@@ -176,7 +176,7 @@ public:
 
     ~JobsList(){}
 
-    void addJob(Command *cmd, bool isStopped = false);
+    void addJob(Command *cmd, pid_t pid, bool isStopped = false);
 
     void printJobsList();
 
@@ -306,7 +306,7 @@ public:
     // TODO: add extra methods as needed
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
-    void addJob(Command* cmd);
+    void addJob(Command* cmd, pid_t pid);
     void setWorkingPid(pid_t pid);
     pid_t getWorkingPid() const;
     bool isWaiting() const;

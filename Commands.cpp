@@ -121,7 +121,7 @@ ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {
     vector<string> args;
     int args_num = _parseCommandLine(cmd_s.c_str(), args);
     if(args_num == 1){
-        m_prompt = "smash>";
+        m_prompt = "smash";
     }
     else {
         m_prompt = args[1];
@@ -466,7 +466,7 @@ void ExternalCommand :: execute(){
     if (pid == 0) {
         setpgrp();
         if(_isBackgroundComamnd(line) == true){
-            //SmallShell::getInstance().addJob();
+            SmallShell::getInstance().addJob(this, getpid());
         }
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
     } else if(_isBackgroundComamnd(line) == false){
@@ -550,19 +550,14 @@ std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd->GetLine();
     return os;
 }
-/*
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
-    return os;
-}*/
 
-void JobsList :: addJob(Command *cmd, bool isStopped){
+void JobsList :: addJob(Command *cmd, pid_t pid, bool isStopped){
 
     unsigned int max_id = 0;
     if(!m_max_ids.empty())
         max_id = *(--m_max_ids.end());
 
-    JobEntry job(isStopped, max_id+1, cmd);
+    JobEntry job(isStopped, max_id+1, cmd, pid);
     m_jobs.insert({max_id+1,job});
     m_max_ids.insert(max_id+1);
 }
@@ -625,7 +620,7 @@ bool JobsList::isEmpty() const {
     return m_jobs.empty();
 }
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd), m_pid(pid) {}
 
 
 Command *JobsList::JobEntry::GetCommand() const {
@@ -663,8 +658,8 @@ void SmallShell::SetPrompt(const string& prompt){
     m_prompt = prompt + "> ";
 }
 
-void SmallShell::addJob(Command* cmd) {
-    m_jobsList.addJob(cmd);
+void SmallShell::addJob(Command* cmd, pid_t pid) {
+    m_jobsList.addJob(cmd, pid);
 }
 
 
