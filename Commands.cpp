@@ -333,6 +333,13 @@ void sortFiles(map<string, set<string>> &map, const char* path, string fileName)
         map["link"].insert(fileName);
     }
 }
+void printKey(string key, set<string> values){
+    cout << key << ": ";
+    for(const auto& file : values){
+        cout << file << ", ";
+    }
+    cout << endl;
+}
 void ListDirCommand::execute() {
     int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(opened == -1){
@@ -344,9 +351,9 @@ void ListDirCommand::execute() {
     char buffer[maxRead];
     ssize_t bytesRead;
     map<string ,set<string>> filesMap;
-    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("link", set<string>()));
-    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("directory", set<string>()));
-    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("file", set<string>()));
+    filesMap.insert( pair<string ,set<string>>("link", set<string>()));
+    filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
+    filesMap.insert( pair<string ,set<string>>("file", set<string>()));
 
     while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
@@ -360,15 +367,10 @@ void ListDirCommand::execute() {
             offset += entry->d_reclen;
         }
     }
+    if(!filesMap["file"].empty()) printKey("file", filesMap["file"]);
+    if(!filesMap["directory"].empty()) printKey("directory", filesMap["directory"]);
+    if(!filesMap["link"].empty()) printKey("link", filesMap["link"]);
 
-    for (const auto& fileType : filesMap) {
-        if(fileType.second.empty()) continue;
-        cout << fileType.first << ": ";
-        for(const auto& file : fileType.second){
-            cout << file << ", ";
-        }
-        cout << endl;
-    }
 }
 void GetUserCommand::execute() {
     string procPath = "/proc/" + to_string(m_targetPid) + "/status";
