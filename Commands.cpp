@@ -465,17 +465,15 @@ void ExternalCommand :: execute(){
     pid_t pid = fork();
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
+        setpgrp();
         if(_isBackgroundComamnd(line) == true){
             //SmallShell::getInstance().addJob();
         }
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
     } else if(_isBackgroundComamnd(line) == false){
+        smash.setWorkingPid(pid);
         waitpid(pid, &wstatus, 0);
-        setpgrp();
-    } else {
-        //smash.setWorkingPid(pid);
-        //waitpid(pid, &wstatus, 0);
-        //smash.setWorkingPid(-1);
+        smash.setWorkingPid(-1);
     }
 }
 
