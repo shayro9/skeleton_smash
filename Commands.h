@@ -38,14 +38,15 @@ public:
 
 class BuiltInCommand : public Command {
 public:
-    BuiltInCommand(const char *cmd_line) : Command(cmd_line){}
+    BuiltInCommand(const char *cmd_line);
 
     virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
+    string m_org_word;
 public:
-    ExternalCommand(const char *cmd_line);
+    ExternalCommand(const char *cmd_line, string first_word);
 
     virtual ~ExternalCommand() {}
 
