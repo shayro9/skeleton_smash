@@ -558,6 +558,7 @@ std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
 }*/
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
+
     unsigned int max_id = 0;
     if(!m_max_ids.empty())
         max_id = *(--m_max_ids.end());
@@ -733,6 +734,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
         return;
     }
     try {
+        m_jobsList.removeFinishedJobs();
         Command* cmd = CreateCommand(cmd_line);
         cmd->execute();
     }
