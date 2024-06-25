@@ -12,9 +12,14 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include "Commands.h"
 #include <dirent.h>
+#include <sys/syscall.h>
+#include <pwd.h>
+#include <grp.h>
+
 using namespace std;
 
 extern std :: string ChangeDirCommand :: m_lastPwd;
@@ -116,7 +121,17 @@ BuiltInCommand::BuiltInCommand(const char *cmd_line) : Command(_StringremoveBack
 }
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
-ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        m_prompt = "smash";
+    }
+    else {
+        m_prompt = args[1];
+    }
+}
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){}
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs) {
@@ -188,6 +203,45 @@ ListDirCommand::ListDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) 
         throw invalid_argument("smash error: listdir: too many arguments");
     }
 }
+GetUserCommand::GetUserCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 2){
+        m_targetPid = stoi(args[1]);
+    }
+    else{
+        throw invalid_argument("smash error: getuser: too many arguments");
+    }
+}
+WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    int i = 2;
+    try {
+        m_interval = stoi(args[1]);
+    }
+    catch (...){
+        m_interval = 2;
+        i = 1;
+    }
+    if(i == 2 && args_num == 2){
+        throw invalid_argument("smash error: watch: command not specified");
+    }
+    if(m_interval <= 0){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    string line;
+    for (; i < args_num; ++i) {
+        line += args[i];
+    }
+    SmallShell& shell = SmallShell::getInstance();
+    m_command = shell.CreateCommand(line.c_str());
+}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
@@ -237,14 +291,7 @@ void ShowPidCommand::execute() {
     cout <<"smash pid is " << pid << endl;
 }
 void ChangePrompt::execute() {
-    string cmd_s = _trim(string(m_cmd));
-    string prompt;
-    int firstSpace = cmd_s.find_first_of(WHITESPACE);
-    if (firstSpace > 0)
-        prompt = cmd_s.substr( firstSpace + 1, cmd_s.find_first_of(" \n"));
-    else
-        prompt = "";
-    SmallShell::getInstance().SetPrompt(prompt);
+    SmallShell::getInstance().SetPrompt(m_prompt);
 }
 void JobsCommand::execute() {
     m_jobs->printJobsList();
@@ -257,12 +304,11 @@ void ForegroundCommand::execute() {
     SmallShell &smash = SmallShell::getInstance();
     Command* cmd = job->GetCommand();
     pid_t workingPid = job->Getpid();
-    cmd->execute();
     int status;
-
     smash.setWorkingPid(workingPid);
-    waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
+    m_jobs->removeJobById(m_job_id);
+    waitpid(workingPid, &status, 0);
     smash.setWorkingPid(-1);
 }
 void KillCommand::execute() {
@@ -281,6 +327,28 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
+void sortFiles(map<string, set<string>> &map, const char* path, string fileName){
+    struct stat st;
+    lstat(path, &st);
+    if(S_ISREG(st.st_mode)){
+        map["file"].insert(fileName);
+    }
+    else if(S_ISDIR(st.st_mode)){
+        map["directory"].insert(fileName);
+    }
+    else if(S_ISLNK(st.st_mode)){
+        map["link"].insert(fileName);
+    }
+}
+void printKey(string key, set<string> values){
+    cout << key << ": ";
+    for(const auto& file : values){
+        cout << file;
+        if(values.find(file) != --values.end())
+            cout << ", ";
+    }
+    cout << endl;
+}
 void ListDirCommand::execute() {
     int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(opened == -1){
@@ -291,17 +359,85 @@ void ListDirCommand::execute() {
     const int maxRead = 100;
     char buffer[maxRead];
     ssize_t bytesRead;
-    if ((bytesRead = read(opened, buffer, maxRead)) > 0) { // Read the directory contents
+    map<string ,set<string>> filesMap;
+    filesMap.insert( pair<string ,set<string>>("link", set<string>()));
+    filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
+    filesMap.insert( pair<string ,set<string>>("file", set<string>()));
+
+    while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
             auto* entry = (struct linux_dirent*)(buffer + offset);
             string fileName = entry->d_name;
             if (entry->d_ino != 0 && fileName != "." && fileName != "..") {
-                cout << fileName << endl;
+                string fullPath = m_path + "/" + fileName;
+                sortFiles(filesMap, fullPath.c_str(), fileName);
             }
             offset += entry->d_reclen;
         }
     }
+    if(!filesMap["file"].empty()) printKey("file", filesMap["file"]);
+    if(!filesMap["directory"].empty()) printKey("directory", filesMap["directory"]);
+    if(!filesMap["link"].empty()) printKey("link", filesMap["link"]);
+
+}
+void GetUserCommand::execute() {
+    string procPath = "/proc/" + to_string(m_targetPid) + "/status";
+    struct stat procStat;
+    if(stat(procPath.c_str(), &procStat) == -1) {
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
+
+    uid_t uid = procStat.st_uid;
+    struct passwd *pw = getpwuid(uid);
+
+    gid_t grp = procStat.st_gid;
+    struct group *grp_entry = getgrgid(grp);
+
+    string userName, groupName;
+    if (grp_entry != NULL) {
+        groupName = grp_entry->gr_name;
+    } else {
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
+
+    try {
+        userName = pw->pw_name;
+    }
+    catch (const exception& e){
+        throw e;
+        return;
+    }
+
+    cout << "User: " << userName << endl << "Group: " << groupName << endl;
+}
+void WatchCommand::signalHandler(int sig_num) {
+    m_command->execute();
+}
+void WatchCommand::execute() {
+	int wstatus;
+    pid_t child_pid = fork();
+    if (child_pid == 0) {
+		setpgrp();
+        signal(SIGALRM, signalHandler);
+
+        struct itimerval timer;
+        timer.it_value.tv_sec = 1;
+        timer.it_value.tv_usec = 0;
+        timer.it_interval.tv_sec = m_interval;
+        timer.it_interval.tv_usec = 0;
+
+		setitimer(ITIMER_REAL, &timer, nullptr);
+		
+        while (true) {
+            pause();
+        }
+    } else {
+		SmallShell::getInstance().setWorkingPid(child_pid);
+        waitpid(child_pid, &wstatus, 0);
+        SmallShell::getInstance().setWorkingPid(-1);
+    }
+
 }
 
 /////////////////////////////////////////
@@ -321,6 +457,7 @@ void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
     //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
+    _removeBackgroundSign(&line[0]);
 
 //TO DO : make a call to the function that is described in the notes
     if(line.find("?") != string::npos || line.find("*") != string::npos){
@@ -330,25 +467,26 @@ void ExternalCommand :: execute(){
         arguments.push_back(nullptr);
     }else{
         vector<string> tmp;
-        _parseCommandLine(this->m_cmd.c_str(), tmp);
+        _parseCommandLine(line.c_str(), tmp);
         for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
     }
     int wstatus;
     pid_t pid = fork();
+    if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
+        SmallShell::getInstance().addJob(this, pid);
+    }
     //SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
-        if(_isBackgroundComamnd(line) == true){
-            //SmallShell::getInstance().addJob();
-        }
-        execvp(arguments[0], const_cast<char* const*>(arguments.data()));
-    } else if(_isBackgroundComamnd(line) == false){
-        waitpid(pid, &wstatus, 0);
         setpgrp();
-    } else {
-        //smash.setWorkingPid(pid);
-        //waitpid(pid, &wstatus, 0);
-        //smash.setWorkingPid(-1);
+        if(execvp(arguments[0], const_cast<char* const*>(arguments.data())) == -1)
+        {
+            perror("smash error: execvp failed");
+        }
+    } else if(_isBackgroundComamnd(this->m_cmd) == false){
+        smash.setWorkingPid(pid);
+        waitpid(pid, &wstatus, 0);
+        smash.setWorkingPid(-1);
     }
 }
 
@@ -479,18 +617,14 @@ std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
     os << job.m_cmd->GetLine();
     return os;
 }
-/*
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd;
-    return os;
-}*/
 
-void JobsList :: addJob(Command *cmd, bool isStopped){
+void JobsList :: addJob(Command *cmd, pid_t pid, bool isStopped){
+
     unsigned int max_id = 0;
     if(!m_max_ids.empty())
         max_id = *(--m_max_ids.end());
 
-    JobEntry job(isStopped, max_id+1, cmd);
+    JobEntry job(isStopped, max_id+1, cmd, pid);
     m_jobs.insert({max_id+1,job});
     m_max_ids.insert(max_id+1);
 }
@@ -553,7 +687,7 @@ bool JobsList::isEmpty() const {
     return m_jobs.empty();
 }
 
-JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
+JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd, pid_t pid) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd), m_pid(pid) {}
 
 
 Command *JobsList::JobEntry::GetCommand() const {
@@ -588,14 +722,11 @@ std::string SmallShell::GetPrompt() {
 }
 
 void SmallShell::SetPrompt(const string& prompt){
-    if(!prompt.empty())
-        m_prompt = prompt + "> ";
-    else
-        m_prompt = "smash> ";
+    m_prompt = prompt + "> ";
 }
 
-void SmallShell::addJob(Command* cmd) {
-    m_jobsList.addJob(cmd);
+void SmallShell::addJob(Command* cmd, pid_t pid) {
+    m_jobsList.addJob(cmd, pid);
 }
 
 
@@ -652,28 +783,37 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "kill") {
         return new KillCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "listdir") {
+        return new ListDirCommand(cmd_line);
+    }
+    else if (firstWord == "getuser") {
+        return new GetUserCommand(cmd_line);
+    }
+    else if (firstWord == "watch") {
+        return new WatchCommand(cmd_line);
+    }
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
     }
     else {
         return new ExternalCommand(cmd_line,original_line);
     }
+    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
-    // for example:
     if(_trim(string(cmd_line)).empty()){
         return;
     }
     try {
+        m_jobsList.removeFinishedJobs();
         Command* cmd = CreateCommand(cmd_line);
         cmd->execute();
     }
     catch (const exception& e){
-        cout << e.what() << endl;
+        cerr << e.what() << endl;
     }
-    // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
 bool SmallShell::isWaiting() const {
