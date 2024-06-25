@@ -382,7 +382,11 @@ void GetUserCommand::execute() {
     cout << "User: " << userName << endl << "Group: " << groupName << endl;
 }
 void WatchCommand::signalHandler(int sig_num) {
+    pid_t childPid = fork();
+    SmallShell& shell = SmallShell::getInstance();
+    shell.setWorkingPid(childPid);
     m_command->execute();
+    shell.setWorkingPid(-1);
 }
 void WatchCommand::execute() {
     signal(SIGALRM, signalHandler);
