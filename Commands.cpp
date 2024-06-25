@@ -445,9 +445,9 @@ vector<string> spllitStringByChar(string str, string delim) {
 }
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
-    string cmdline = _trim(this->m_cmd);
+    string line = _trim(this->m_cmd);
     //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
-    _removeBackgroundSign(&cmdline[0]);
+    _removeBackgroundSign(&line[0]);
 
 //TO DO : make a call to the function that is described in the notes
     if(line.find("?") != string::npos || line.find("*") != string::npos){
@@ -463,12 +463,12 @@ void ExternalCommand :: execute(){
     }
     int wstatus;
     pid_t pid = fork();
+    if(_isBackgroundComamnd(line) == true && pid > 0){
+        SmallShell::getInstance().addJob(this, pid);
+    }
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
-        if(_isBackgroundComamnd(line) == true){
-            SmallShell::getInstance().addJob(this, getpid());
-        }
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
     } else if(_isBackgroundComamnd(line) == false){
         smash.setWorkingPid(pid);
