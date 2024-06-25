@@ -337,8 +337,8 @@ void printKey(string key, set<string> values){
     cout << key << ": ";
     for(const auto& file : values){
         cout << file;
-        if(values.find(file) != values.end()--)
-            cout << ",";
+        if(values.find(file) != --values.end())
+            cout << ", ";
     }
     cout << endl;
 }
@@ -472,7 +472,10 @@ void ExternalCommand :: execute(){
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
-        execvp(arguments[0], const_cast<char* const*>(arguments.data()));
+        if(execvp(arguments[0], const_cast<char* const*>(arguments.data())) == -1)
+        {
+            perror("smash error: execvp failed");
+        }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
         waitpid(pid, &wstatus, 0);
