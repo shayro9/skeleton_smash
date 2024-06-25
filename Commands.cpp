@@ -716,6 +716,7 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "watch") {
         return new WatchCommand(cmd_line);
+    }
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
     }
