@@ -737,7 +737,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
         cmd->execute();
     }
     catch (const exception& e){
-        cout << e.what() << endl;
+        cerr << e.what() << endl;
     }
 }
 
