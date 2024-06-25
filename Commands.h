@@ -64,13 +64,18 @@ public:
 
 class WatchCommand : public Command {
     // TODO: Add your data members
+    int m_interval;
+    static Command* m_command;
 public:
     WatchCommand(const char *cmd_line);
 
     virtual ~WatchCommand() {}
 
     void execute() override;
+
+    static void signalHandler(int sig_num);
 };
+Command* WatchCommand::m_command;
 
 class RedirectionCommand : public Command {
     unsigned int m_std_fd;
@@ -236,6 +241,7 @@ public:
 };
 
 class GetUserCommand : public BuiltInCommand {
+    pid_t m_targetPid;
 public:
     GetUserCommand(const char *cmd_line);
 

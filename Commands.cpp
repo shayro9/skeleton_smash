@@ -12,9 +12,14 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include "Commands.h"
 #include <dirent.h>
+#include <sys/syscall.h>
+#include <pwd.h>
+#include <grp.h>
+
 using namespace std;
 
 extern std :: string ChangeDirCommand :: m_lastPwd;
@@ -183,6 +188,45 @@ ListDirCommand::ListDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) 
         throw invalid_argument("smash error: listdir: too many arguments");
     }
 }
+GetUserCommand::GetUserCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 2){
+        m_targetPid = stoi(args[1]);
+    }
+    else{
+        throw invalid_argument("smash error: listdir: too many arguments");
+    }
+}
+WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    int i = 2;
+    try {
+        m_interval = stoi(args[1]);
+    }
+    catch (...){
+        m_interval = 2;
+        i = 1;
+    }
+    if(i == 2 && args_num == 2){
+        throw invalid_argument("smash error: watch: command not specified");
+    }
+    if(m_interval <= 0){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    string line;
+    for (; i < args_num; ++i) {
+        line += args[i];
+    }
+    SmallShell& shell = SmallShell::getInstance();
+    m_command = shell.CreateCommand(line.c_str());
+}
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
@@ -274,6 +318,19 @@ void QuitCommand::execute() {
     }
     exit(0);
 }
+void sortFiles(map<string, set<string>> &map, const char* path, string fileName){
+    struct stat st;
+    lstat(path, &st);
+    if(S_ISREG(st.st_mode)){
+        map["file"].insert(fileName);
+    }
+    else if(S_ISDIR(st.st_mode)){
+        map["directory"].insert(fileName);
+    }
+    else if(S_ISLNK(st.st_mode)){
+        map["link"].insert(fileName);
+    }
+}
 void ListDirCommand::execute() {
     int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(opened == -1){
@@ -284,17 +341,94 @@ void ListDirCommand::execute() {
     const int maxRead = 100;
     char buffer[maxRead];
     ssize_t bytesRead;
-    if ((bytesRead = read(opened, buffer, maxRead)) > 0) { // Read the directory contents
+    map<string ,set<string>> filesMap;
+    filesMap["file"] = set<string>();
+    filesMap["directory"] = set<string>();
+    filesMap["link"] = set<string>();
+
+    if ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
             auto* entry = (struct linux_dirent*)(buffer + offset);
             string fileName = entry->d_name;
             if (entry->d_ino != 0 && fileName != "." && fileName != "..") {
-                cout << fileName << endl;
+                string fullPath = m_path + "/" + fileName;
+                sortFiles(filesMap, fullPath.c_str(), fileName);
             }
             offset += entry->d_reclen;
         }
     }
+
+    for (const auto& fileType : filesMap) {
+        if(fileType.second.empty()) continue;
+        cout << fileType.first << ": ";
+        for(const auto& file : fileType.second){
+            cout << file << ", ";
+        }
+        cout << endl;
+    }
+}
+string getPidUser(pid_t pid){
+    string procPath = "/proc/" + to_string(pid);
+    struct stat procStat;
+    if(stat(procPath.c_str(), &procStat) == -1) {
+        throw invalid_argument("smash error: getuser: process " + to_string(pid) + " does not exist");
+    }
+    uid_t uid = procStat.st_uid;
+    struct passwd *pw = getpwuid(uid);
+    return pw->pw_name;
+}
+void GetUserCommand::execute() {
+    int grp;
+    string userName, groupName;
+    if ((grp = getpgid(m_targetPid)) == -1){
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
+    struct group *grp_entry = getgrgid(grp);
+
+    if (grp_entry != nullptr) {
+        groupName = grp_entry->gr_name;
+    } else {
+        throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
+    }
+
+    try {
+        userName = getPidUser(m_targetPid);
+    }
+    catch (const exception& e){
+        throw e;
+        return;
+    }
+
+    cout << "User: " << userName << endl << "Group: " << groupName << endl;
+}
+void WatchCommand::signalHandler(int sig_num) {
+    m_command->execute();
+}
+void WatchCommand::execute() {
+	int wstatus;
+    pid_t child_pid = fork();
+    if (child_pid == 0) {
+		setpgrp();
+        signal(SIGALRM, signalHandler);
+
+        struct itimerval timer;
+        timer.it_value.tv_sec = 1;
+        timer.it_value.tv_usec = 0;
+        timer.it_interval.tv_sec = m_interval;
+        timer.it_interval.tv_usec = 0;
+
+		setitimer(ITIMER_REAL, &timer, nullptr);
+		
+        while (true) {
+            pause();
+        }
+    } else {
+		SmallShell::getInstance().setWorkingPid(child_pid);
+        waitpid(child_pid, &wstatus, 0);
+        SmallShell::getInstance().setWorkingPid(-1);
+    }
+
 }
 
 /////////////////////////////////////////
@@ -574,6 +708,14 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "listdir") {
+        return new ListDirCommand(cmd_line);
+    }
+    else if (firstWord == "getuser") {
+        return new GetUserCommand(cmd_line);
+    }
+    else if (firstWord == "watch") {
+        return new WatchCommand(cmd_line);
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
     }
