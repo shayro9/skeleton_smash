@@ -185,9 +185,6 @@ WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
     if(args_num == 1){
         throw invalid_argument("smash error: watch: invalid interval");
     }
-    else if(args_num == 2){
-        throw invalid_argument("smash error: watch: command not specified");
-    }
     int i = 2;
     try {
         m_interval = stoi(args[1]);
@@ -195,6 +192,9 @@ WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
     catch (...){
         m_interval = 2;
         i = 1;
+    }
+    if(i == 2 && args_num == 2){
+        throw invalid_argument("smash error: watch: command not specified");
     }
     if(m_interval <= 0){
         throw invalid_argument("smash error: watch: invalid interval");

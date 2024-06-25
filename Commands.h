@@ -64,7 +64,7 @@ public:
 
 class WatchCommand : public Command {
     // TODO: Add your data members
-    unsigned int m_interval;
+    int m_interval;
     static Command* m_command;
 public:
     WatchCommand(const char *cmd_line);
