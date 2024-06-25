@@ -297,12 +297,12 @@ void ForegroundCommand::execute() {
     SmallShell &smash = SmallShell::getInstance();
     Command* cmd = job->GetCommand();
     pid_t workingPid = job->Getpid();
-    cmd->execute();
     int status;
-
+    cmd->execute();
     smash.setWorkingPid(workingPid);
-    waitpid(workingPid, &status, 0);
     cout << cmd->GetLine() << endl;
+    m_jobs->getJobById(m_job_id)
+    waitpid(workingPid, &status, 0);
     smash.setWorkingPid(-1);
 }
 void KillCommand::execute() {
@@ -457,20 +457,20 @@ void ExternalCommand :: execute(){
         arguments.push_back(nullptr);
     }else{
         vector<string> tmp;
-        _parseCommandLine(this->m_cmd.c_str(), tmp);
+        _parseCommandLine(line.c_str(), tmp);
         for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
     }
     int wstatus;
     pid_t pid = fork();
-    if(_isBackgroundComamnd(line) == true && pid > 0){
+    if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
         SmallShell::getInstance().addJob(this, pid);
     }
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
         execvp(arguments[0], const_cast<char* const*>(arguments.data()));
-    } else if(_isBackgroundComamnd(line) == false){
+    } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
         waitpid(pid, &wstatus, 0);
         smash.setWorkingPid(-1);
