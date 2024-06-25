@@ -445,8 +445,9 @@ vector<string> spllitStringByChar(string str, string delim) {
 }
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
-    string line = _trim(this->m_cmd);
+    string cmdline = _trim(this->m_cmd);
     //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
+    string line = _StringRemoveBackgroundSign(cmdline);
 
 //TO DO : make a call to the function that is described in the notes
     if(line.find("?") != string::npos || line.find("*") != string::npos){
