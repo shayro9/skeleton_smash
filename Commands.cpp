@@ -724,11 +724,11 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else {
         return new ExternalCommand(cmd_line);
     }
+    return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
-    // for example:
     if(_trim(string(cmd_line)).empty()){
         return;
     }
@@ -739,7 +739,6 @@ void SmallShell::executeCommand(const char *cmd_line) {
     catch (const exception& e){
         cout << e.what() << endl;
     }
-    // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
 bool SmallShell::isWaiting() const {
