@@ -385,26 +385,28 @@ void WatchCommand::signalHandler(int sig_num) {
     m_command->execute();
 }
 void WatchCommand::execute() {
-    signal(SIGALRM, signalHandler);
+    pid_t child_pid = fork();
+    if (child_pid == 0) {
+        signal(SIGALRM, signalHandler);
 
-    struct itimerval timer;
-    timer.it_value.tv_sec = 1;
-    timer.it_value.tv_usec = 0;
-    timer.it_interval.tv_sec = m_interval;
-    timer.it_interval.tv_usec = 0;
+        struct itimerval timer;
+        timer.it_value.tv_sec = 1;
+        timer.it_value.tv_usec = 0;
+        timer.it_interval.tv_sec = m_interval;
+        timer.it_interval.tv_usec = 0;
 
-    if (setitimer(ITIMER_REAL, &timer, nullptr) == -1) {
-        perror("Error setting timer");
-        return;
+        if (setitimer(ITIMER_REAL, &timer, nullptr) == -1) {
+            perror("Error setting timer");
+            return;
+        }
+
+        while (true) {
+            pause();
+        }
+    } else {
+        wait(nullptr);
     }
 
-    while (true) {
-        pid_t childPid = fork();
-        SmallShell& shell = SmallShell::getInstance();
-        shell.setWorkingPid(childPid);
-        pause();
-        shell.setWorkingPid(-1);
-    }
 }
 
 /////////////////////////////////////////
