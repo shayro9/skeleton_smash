@@ -476,12 +476,13 @@ void ExternalCommand :: execute(){
     if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
         SmallShell::getInstance().addJob(this, pid);
     }
-    //SmallShell &smash = SmallShell::getInstance();
+    SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
         if(execvp(arguments[0], const_cast<char* const*>(arguments.data())) == -1)
         {
             perror("smash error: execvp failed");
+            exit(1);
         }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
@@ -737,18 +738,27 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     string cmd_s = _trim(string(cmd_line));
     string original_line(cmd_line);
     char* str = new char[cmd_s.size() + 1];
-    for(int i = 0; i < cmd_s.size(); i++){str[i] = cmd[i];}
+    for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
     str[cmd_s.size()] = '\0';
     _removeBackgroundSign(str);
-    cmd_s(str);
+    cmd_s = str;
+    free(str);
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     //string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-    cout << firstWord << "jkjd" << endl;
     if(this->m_aliasDS.checkInAlias(firstWord)){
         string tmp = this->m_aliasDS.TranslateAlias(firstWord);
+        tmp = tmp.substr(1, tmp.size()-2);
         cmd_line = (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str();
+        cmd_s = _trim(string(cmd_line));
+        str = new char[cmd_s.size() + 1];
+        for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
+        str[cmd_s.size()] = '\0';
+        _removeBackgroundSign(str);
+        cmd_s = str;
+        free(str);
+        firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     }
-    else if (firstWord == "cd") {
+    if (firstWord == "cd") {
         return new ChangeDirCommand(cmd_line);
     }
     else if (firstWord == "chprompt") {
