@@ -660,10 +660,7 @@ std::string SmallShell::GetPrompt() {
 }
 
 void SmallShell::SetPrompt(const string& prompt){
-    if(!prompt.empty())
-        m_prompt = prompt + "> ";
-    else
-        m_prompt = "smash> ";
+    m_prompt = prompt + "> ";
 }
 
 void SmallShell::addJob(Command* cmd) {
