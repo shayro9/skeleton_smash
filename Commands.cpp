@@ -344,9 +344,9 @@ void ListDirCommand::execute() {
     char buffer[maxRead];
     ssize_t bytesRead;
     map<string ,set<string>> filesMap;
-    filesMap.insert(pair<string ,set<string>>("file", set<string>()));
-    filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
-    filesMap.insert(pair<string ,set<string>>("link", set<string>()));
+    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("link", set<string>()));
+    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("directory", set<string>()));
+    filesMap.insert(--filesMap.end(), pair<string ,set<string>>("file", set<string>()));
 
     while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
