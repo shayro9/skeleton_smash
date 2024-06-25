@@ -32,7 +32,7 @@ public:
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
-    string GetLine() const;
+    virtual string GetLine() const;
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
 
@@ -49,7 +49,7 @@ public:
     ExternalCommand(const char *cmd_line, string first_word);
 
     virtual ~ExternalCommand() {}
-
+    virtual string GetLine() const override;
     void execute() override;
 };
 

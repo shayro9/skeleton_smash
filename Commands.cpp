@@ -453,6 +453,10 @@ vector<string> spllitStringByChar(string str, string delim) {
         return res;
 }
 ExternalCommand::ExternalCommand(const char *cmd_line, string org_line) : Command(cmd_line), m_org_word(org_line) {}
+string ExternalCommand :: GetLine() const 
+{
+    return this->m_org_word;
+}
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
@@ -512,7 +516,7 @@ unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS )
 void unaliasCommand :: execute(){
     vector<string> args;
     int size = _parseCommandLine(m_cmd.c_str(), args);
-    for(int i = 0 ; i < size; i++){
+    for(int i = 1 ; i < size; i++){
         //try{
         m_aliasDS->remove_alias_command(string(args[i]));
         //}catch(const std :: exception& e){
@@ -742,20 +746,21 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     str[cmd_s.size()] = '\0';
     _removeBackgroundSign(str);
     cmd_s = str;
-    free(str);
+    delete[] str;
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     //string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     if(this->m_aliasDS.checkInAlias(firstWord)){
         string tmp = this->m_aliasDS.TranslateAlias(firstWord);
         tmp = tmp.substr(1, tmp.size()-2);
-        cmd_line = (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str();
+        cmd_s = string(cmd_line);
+        cmd_line = (cmd_s.find_first_of(" \n") != string::npos) ? (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str() : tmp.c_str();
         cmd_s = _trim(string(cmd_line));
         str = new char[cmd_s.size() + 1];
         for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
         str[cmd_s.size()] = '\0';
         _removeBackgroundSign(str);
         cmd_s = str;
-        free(str);
+        delete[] str;
         firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     }
     if (firstWord == "cd") {
@@ -804,6 +809,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
+    }
+    else if (firstWord == "unalias"){
+        return new unaliasCommand(cmd_line,&m_aliasDS);
     }
     else {
         return new ExternalCommand(cmd_line,original_line);
