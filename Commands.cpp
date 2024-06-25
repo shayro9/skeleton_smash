@@ -476,12 +476,13 @@ void ExternalCommand :: execute(){
     if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
         SmallShell::getInstance().addJob(this, pid);
     }
-    //SmallShell &smash = SmallShell::getInstance();
+    SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
         setpgrp();
         if(execvp(arguments[0], const_cast<char* const*>(arguments.data())) == -1)
         {
             perror("smash error: execvp failed");
+            exit(1);
         }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
