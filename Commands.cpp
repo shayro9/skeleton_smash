@@ -298,10 +298,9 @@ void ForegroundCommand::execute() {
     Command* cmd = job->GetCommand();
     pid_t workingPid = job->Getpid();
     int status;
-    cmd->execute();
     smash.setWorkingPid(workingPid);
     cout << cmd->GetLine() << endl;
-    m_jobs->getJobById(m_job_id)
+    m_jobs->removeJobById(m_job_id);
     waitpid(workingPid, &status, 0);
     smash.setWorkingPid(-1);
 }
@@ -345,9 +344,9 @@ void ListDirCommand::execute() {
     char buffer[maxRead];
     ssize_t bytesRead;
     map<string ,set<string>> filesMap;
-    filesMap["file"] = set<string>();
-    filesMap["directory"] = set<string>();
-    filesMap["link"] = set<string>();
+    filesMap.insert(pair<string ,set<string>>("file", set<string>()));
+    filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
+    filesMap.insert(pair<string ,set<string>>("link", set<string>()));
 
     while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
