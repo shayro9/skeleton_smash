@@ -10,6 +10,7 @@
 #include <regex>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <iomanip>
 #include "Commands.h"
@@ -176,6 +177,34 @@ GetUserCommand::GetUserCommand(const char *cmd_line) : BuiltInCommand(cmd_line) 
     else{
         throw invalid_argument("smash error: listdir: too many arguments");
     }
+}
+WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num == 1){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    else if(args_num == 2){
+        throw invalid_argument("smash error: watch: command not specified");
+    }
+    int i = 2;
+    try {
+        m_interval = stoi(args[1]);
+    }
+    catch (...){
+        m_interval = 2;
+        i = 1;
+    }
+    if(m_interval <= 0){
+        throw invalid_argument("smash error: watch: invalid interval");
+    }
+    string line;
+    for (; i < args_num; ++i) {
+        line += args[i];
+    }
+    SmallShell& shell = SmallShell::getInstance();
+    m_command = shell.CreateCommand(line.c_str());
 }
 
 void GetCurrDirCommand::execute() {
@@ -351,6 +380,27 @@ void GetUserCommand::execute() {
     }
 
     cout << "User: " << userName << endl << "Group: " << groupName << endl;
+}
+void WatchCommand::signalHandler(int sig_num) {
+    m_command->execute();
+}
+void WatchCommand::execute() {
+    signal(SIGALRM, signalHandler);
+
+    struct itimerval timer;
+    timer.it_value.tv_sec = 1;
+    timer.it_value.tv_usec = 0;
+    timer.it_interval.tv_sec = m_interval;
+    timer.it_interval.tv_usec = 0;
+
+    if (setitimer(ITIMER_REAL, &timer, nullptr) == -1) {
+        perror("Error setting timer");
+        return;
+    }
+
+    while (true) {
+        pause();
+    }
 }
 
 /////////////////////////////////////////

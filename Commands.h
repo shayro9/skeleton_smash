@@ -64,12 +64,16 @@ public:
 
 class WatchCommand : public Command {
     // TODO: Add your data members
+    unsigned int m_interval;
+    Command* m_command;
 public:
     WatchCommand(const char *cmd_line);
 
     virtual ~WatchCommand() {}
 
     void execute() override;
+
+    void signalHandler(int sig_num);
 };
 
 class RedirectionCommand : public Command {
