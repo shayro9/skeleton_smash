@@ -11,7 +11,7 @@
 
 using namespace std;
 //TODO ?????
-//vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
+//static vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 
 struct linux_dirent{
     unsigned long   d_ino;
@@ -78,7 +78,7 @@ public:
 Command* WatchCommand::m_command;
 
 class RedirectionCommand : public Command {
-    // TODO: Add your data members
+    unsigned int m_std_fd;
 public:
     explicit RedirectionCommand(const char *cmd_line);
 
@@ -100,7 +100,6 @@ public:
     void execute() override;
 };
 //TODO?
-//std :: string ChangeDirCommand :: m_lastPwd;
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
@@ -127,6 +126,13 @@ public:
     virtual ~ChangePrompt() {}
 
     void execute() override;
+};
+
+class AuxAliasommand: public Command {
+    public:
+        AuxAliasommand(const char *cmd_line);
+        virtual ~AuxAliasommand() {}
+        void execute() override;
 };
 
 class JobsList;
@@ -295,7 +301,6 @@ public:
     }
 
     ~SmallShell();
-
     void executeCommand(const char *cmd_line);
     // TODO: add extra methods as needed
     std::string GetPrompt();

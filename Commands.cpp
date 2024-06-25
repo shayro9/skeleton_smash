@@ -1,18 +1,19 @@
 #include <unistd.h>
 #include <cstring>
+#include <regex>
+#include <string>
 #include <iostream>
 #include <vector>
 #include <sstream>
 #include <climits>
 #include <sys/types.h>
-#include <csignal>
 #include <sys/resource.h>
-#include <regex>
+#include <csignal>
 #include <sys/wait.h>
+#include <iomanip>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <fcntl.h>
-#include <iomanip>
 #include "Commands.h"
 #include <dirent.h>
 #include <sys/syscall.h>
@@ -21,8 +22,10 @@
 
 using namespace std;
 
+extern std :: string ChangeDirCommand :: m_lastPwd;
+extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 const std::string WHITESPACE = " \n\r\t\f\v";
-
+const int STDOUT = 1;
 #if 0
 #define FUNC_ENTRY()  \
   cout << __PRETTY_FUNCTION__ << " --> " << endl;
@@ -82,6 +85,24 @@ void _removeBackgroundSign(char *cmd_line) {
     // truncate the command line string up to the last non-space character
     cmd_line[str.find_last_not_of(WHITESPACE, idx)] = 0;
 }
+string _StringRemoveBackgroundSign(const string& cmd_line) {
+    string str(cmd_line);
+    // find last character other than spaces
+    unsigned int idx = str.find_last_not_of(WHITESPACE);
+    // if all characters are spaces then return
+    if (idx == string::npos) {
+        return cmd_line;
+    }
+    // if the command line does not end with & then return
+    if (cmd_line[idx] != '&') {
+        return cmd_line;
+    }
+    // replace the & (background sign) with space and then remove all tailing spaces.
+    str[idx] = ' ';
+    // truncate the command line string up to the last non-space character
+    str[str.find_last_not_of(WHITESPACE, idx)] = 0;
+    return str;
+}
 
 // TODO: Add your implementation for classes in Commands.h
 string Command::GetLine() const {
@@ -96,7 +117,7 @@ std::ostream& operator<<(std::ostream& os, const Command &cmd){
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {}
-//ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 JobsCommand::JobsCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs){}
 ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(cmd_line), m_jobs(jobs) {
     string cmd_s = _trim(string(m_cmd));
@@ -221,31 +242,31 @@ bool checkValid(const string& line){
     return true;
 }
 void ChangeDirCommand ::execute() {
-//    ///// TO fix this
-//    std :: string new_path;
-//    string line = _trim(this->m_cmd);
-//    if(!checkValid(line)){
-//        //TODO: error
-//        std :: cerr << "error: cd: too many arguments\n";
-//        return;
-//    }
-//    if(line[3] == '-'){
-//        if(_trim(this->m_lastPwd).empty()){
-//            std :: cerr << "error: cd: OLDPWD not set\n";
-//            return;
-//        }
-//        new_path = this->m_lastPwd;
-//    }else{
-//        new_path = this->m_cmd.substr(3, this->m_cmd.size());
-//    }
-//    char former_path[PATH_MAX];
-//    getcwd(former_path, PATH_MAX);
-//    int res = chdir(new_path.c_str());
-//    if(res !=0){
-//        perror("smash error: chdir failed");
-//        return;
-//    }
-//    this->m_lastPwd = string(former_path);
+    ///// TO fix this
+    std :: string new_path;
+    string line = _trim(this->m_cmd);
+    if(!checkValid(line)){
+        //TODO: error
+        std :: cerr << "error: cd: too many arguments\n";
+        return;
+    }
+    if(line[3] == '-'){
+        if(_trim(this->m_lastPwd).empty()){
+            std :: cerr << "error: cd: OLDPWD not set\n";
+            return;
+        }
+        new_path = this->m_lastPwd;
+    }else{
+        new_path = this->m_cmd.substr(3, this->m_cmd.size());
+    }
+    char former_path[PATH_MAX];
+    getcwd(former_path, PATH_MAX);
+    int res = chdir(new_path.c_str());
+    if(res !=0){
+        perror("smash error: chdir failed");
+        return;
+    }
+    this->m_lastPwd = string(former_path);
 }
 void ShowPidCommand::execute() {
     pid_t pid;
@@ -426,73 +447,117 @@ vector<string> spllitStringByChar(string str, string delim) {
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
     string line = _trim(this->m_cmd);
-    string firstWord = line.substr(0, line.find_first_of(WHITESPACE));
+    //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
 
-    if(firstWord.find('.') != string::npos){
-        vector<string> tmp = spllitStringByChar(line, WHITESPACE);
-        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
-        arguments.push_back(nullptr);
-    }
-    else{
+//TO DO : make a call to the function that is described in the notes
+    if(line.find("?") != string::npos || line.find("*") != string::npos){
         arguments.push_back(("/bin/bash"));
         arguments.push_back(("-c"));
         arguments.push_back(line.c_str());
+        arguments.push_back(nullptr);
+    }else{
+        vector<string> tmp;
+        _parseCommandLine(this->m_cmd.c_str(), tmp);
+        for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
     }
     int wstatus;
     pid_t pid = fork();
     SmallShell &smash = SmallShell::getInstance();
     if (pid == 0) {
-        setpgrp();
-        for(auto i : arguments){cout << i << endl;}
-        execv(arguments[0], const_cast<char* const*>(arguments.data()));
-    } else {
-        smash.setWorkingPid(pid);
+        if(_isBackgroundComamnd(line) == true){
+            //SmallShell::getInstance().addJob();
+        }
+        execvp(arguments[0], const_cast<char* const*>(arguments.data()));
+    } else if(_isBackgroundComamnd(line) == false){
         waitpid(pid, &wstatus, 0);
-        smash.setWorkingPid(-1);
+        setpgrp();
+    } else {
+        //smash.setWorkingPid(pid);
+        //waitpid(pid, &wstatus, 0);
+        //smash.setWorkingPid(-1);
     }
 }
- 
-//aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-//void aliasCommand:: execute(){
-//    string line = _trim(string(m_cmd));
-//    if(line =="alias"){
-//        m_aliasDS->print_alias_command();
-//        return;
-//    }
-//    regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
-//    if(regex_match(line, reg) == false){
-//        throw std::invalid_argument("smash error: alias: invalid alias format");
-//    }
-//    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
-//    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-//    m_aliasDS->add_alias_command(name, command);//removing quotes from the command
-//}
-//
-//unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
-//
-//void unaliasCommand :: execute(){
-//    vector<string> args;
-//    int size = _parseCommandLine(m_cmd.c_str(), args);
-//    for(int i = 0 ; i < size; i++){
-//        try{
-//        m_aliasDS->remove_alias_command(string(args[i]));
-//        }catch(const std :: exception& e){
-//            throw e;
-//        }
-//    }
-//}
+
+aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
+void aliasCommand:: execute(){
+    string line = _trim(string(m_cmd));
+    if(line =="alias"){
+        m_aliasDS->print_alias_command();
+        return;
+    }
+    regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
+    if(regex_match(line, reg) == false){
+        throw std::invalid_argument("smash error: alias: invalid alias format");
+    }
+    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
+    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
+    m_aliasDS->add_alias_command(name, command);// removing quotes from the command
+}
+
+unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
+
+void unaliasCommand :: execute(){
+    vector<string> args;
+    int size = _parseCommandLine(m_cmd.c_str(), args);
+    for(int i = 0 ; i < size; i++){
+        //try{
+        m_aliasDS->remove_alias_command(string(args[i]));
+        //}catch(const std :: exception& e){
+          //  for(int j = 0 ;j < size; j++){free(args[j]);}
+            //throw e;
+        //}
+    }
+    //for(int j = 0 ;j < size; j++){free(args[j]);}
+}
 
 
-//RedirectionCommand :: RedirectionCommand(const char *cmd_line){
-//    int former_std_fd = dup(STDOUT)
-//    int file = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-//}
-//
-//void RedirectionCommand :: execute(){}
+RedirectionCommand :: RedirectionCommand(const char *cmd_line) : Command(cmd_line) {}
+
+
+void RedirectionCommand :: execute(){
+    pid_t pid = fork();
+    if(pid == 0){
+        std ::string line = _trim(_StringRemoveBackgroundSign(this->m_cmd));
+        string file_name = _trim(line.substr(line.find_last_of(">")+1));
+        int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+        if (file < 0) {
+            throw std::runtime_error("smash error: open failed");
+        }
+/*        int former_std_fd = dup(STDOUT);
+        if(former_std_fd < 0) {
+            close(file);
+            throw std::runtime_error("smash error: dup failed");
+        }*/
+        if (dup2(file, STDOUT) < 0) {
+            close(file);
+            throw std::runtime_error("smash error: dup2 failed");
+        }
+        SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of(WHITESPACE)).c_str())->execute();
+        close(STDOUT);
+        /*if (dup2(m_std_fd, STDOUT) < 0) {
+            throw std::runtime_error("smash error: dup2 failed");
+        }*/
+        exit(0);
+    }else{
+        int status;
+        waitpid(pid, &status, 0);
+    }
+}
 /////////////////////////////////////////
 
 JobsList::JobsList(){}
+
+
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd->GetLine();
+    return os;
+}
+/*
+std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
+    os << job.m_cmd;
+    return os;
+}*/
 
 void JobsList :: addJob(Command *cmd, bool isStopped){
     unsigned int max_id = 0;
@@ -564,10 +629,6 @@ bool JobsList::isEmpty() const {
 
 JobsList :: JobEntry :: JobEntry(bool is_stopped, unsigned int id,Command* cmd) : m_id(id), m_is_finished(is_stopped), m_cmd(cmd) {}
 
-std::ostream& operator<<(std::ostream& os, const JobsList::JobEntry& job){
-    os << job.m_cmd->GetLine();
-    return os;
-}
 
 Command *JobsList::JobEntry::GetCommand() const {
     return m_cmd;
@@ -620,12 +681,15 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     _removeBackgroundSign(&cmd_s[0]);
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
+    if(cmd_s.find(">") != string::npos){
+        return new RedirectionCommand(cmd_line);
+    }
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-//    else if (firstWord == "cd") {
-//        return new ChangeDirCommand(cmd_line);
-//    }
+    else if (firstWord == "cd") {
+        return new ChangeDirCommand(cmd_line);
+    }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
@@ -652,6 +716,11 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "watch") {
         return new WatchCommand(cmd_line);
+    else if (firstWord == "alias"){
+        return new aliasCommand(cmd_line,&m_aliasDS);
+    }
+    else if(this->m_aliasDS.checkInAlias(firstWord)){
+        cout << "Alias command";
     }
     else {
         return new ExternalCommand(cmd_line);
@@ -661,6 +730,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 void SmallShell::executeCommand(const char *cmd_line) {
     // TODO: Add your implementation here
     // for example:
+    if(_trim(string(cmd_line)).empty()){
+        return;
+    }
     try {
         Command* cmd = CreateCommand(cmd_line);
         cmd->execute();
@@ -682,3 +754,36 @@ void SmallShell::setWorkingPid(pid_t pid) {
 pid_t SmallShell::getWorkingPid() const {
     return m_fgPid;
 }
+void aliasCommand_DS :: add_alias_command(std :: string name, std::string command){
+    if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
+        throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
+    }
+    m_alias.push_back({name, command});
+}
+void aliasCommand_DS :: remove_alias_command(std :: string name){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&name](const std::pair<std::string, std::string>& p) {
+        return p.first == name;});
+    if (it != m_alias.end()) {
+        m_alias.erase(it);
+    } else { 
+        throw std::invalid_argument( "smash error: unalias: " +name+" alias does not exist");
+    }
+}
+void aliasCommand_DS :: print_alias_command(){
+    for (auto i : m_alias){
+        std ::cout << i.first << "=" << i.second << std::endl;
+    }
+}
+
+bool aliasCommand_DS :: checkInAlias(std::string alias){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
+    return p.first == alias;});
+    return (it != m_alias.end());
+}
+std::string aliasCommand_DS :: TranslateAlias(std::string alias){
+    auto it = std::find_if(m_alias.begin(), m_alias.end(), [&alias](const std::pair<std::string, std::string>& p) {
+    return p.first == alias;});
+    return it->second;
+}
+
+
