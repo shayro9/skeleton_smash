@@ -65,7 +65,7 @@ public:
 class WatchCommand : public Command {
     // TODO: Add your data members
     unsigned int m_interval;
-    Command* m_command;
+    static Command* m_command;
 public:
     WatchCommand(const char *cmd_line);
 
@@ -73,8 +73,9 @@ public:
 
     void execute() override;
 
-    void signalHandler(int sig_num);
+    static void signalHandler(int sig_num);
 };
+Command* WatchCommand::m_command;
 
 class RedirectionCommand : public Command {
     // TODO: Add your data members

@@ -643,6 +643,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "getuser") {
         return new GetUserCommand(cmd_line);
     }
+    else if (firstWord == "watch") {
+        return new WatchCommand(cmd_line);
+    }
     else {
         return new ExternalCommand(cmd_line);
     }
