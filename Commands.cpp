@@ -25,7 +25,9 @@ using namespace std;
 extern std :: string ChangeDirCommand :: m_lastPwd;
 extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 const std::string WHITESPACE = " \n\r\t\f\v";
+const int STDIN = 0;
 const int STDOUT = 1;
+const int STDERR = 2;
 #if 0
 #define FUNC_ENTRY()  \
   cout << __PRETTY_FUNCTION__ << " --> " << endl;
@@ -85,24 +87,24 @@ void _removeBackgroundSign(char *cmd_line) {
     // truncate the command line string up to the last non-space character
     cmd_line[str.find_last_not_of(WHITESPACE, idx)] = 0;
 }
-string _StringRemoveBackgroundSign(const string& cmd_line) {
+string _StringremoveBackgroundSign(const char *cmd_line) {
     string str(cmd_line);
     // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
     // if all characters are spaces then return
     if (idx == string::npos) {
-        return cmd_line;
+        return str;
     }
     // if the command line does not end with & then return
     if (cmd_line[idx] != '&') {
-        return cmd_line;
+        return str;
     }
     // replace the & (background sign) with space and then remove all tailing spaces.
     str[idx] = ' ';
     // truncate the command line string up to the last non-space character
-    str[str.find_last_not_of(WHITESPACE, idx)] = 0;
-    return str;
+    return _rtrim(str);
 }
+
 
 // TODO: Add your implementation for classes in Commands.h
 string Command::GetLine() const {
@@ -113,7 +115,10 @@ std::ostream& operator<<(std::ostream& os, const Command &cmd){
     return os;
 }
 
-
+BuiltInCommand::BuiltInCommand(const char *cmd_line) : Command(_StringremoveBackgroundSign(cmd_line)){
+    //string str= cmd_line;
+    //this->m_cmd = str;
+}
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 ChangePrompt::ChangePrompt(const char *cmd_line) : BuiltInCommand(cmd_line) {
@@ -257,21 +262,23 @@ bool checkValid(const string& line){
 }
 void ChangeDirCommand ::execute() {
     ///// TO fix this
-    std :: string new_path;
-    string line = _trim(this->m_cmd);
-    if(!checkValid(line)){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    string new_path;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
+    if(args_num > 2 ){
         //TODO: error
         std :: cerr << "error: cd: too many arguments\n";
         return;
     }
-    if(line[3] == '-'){
+    if(args[1] == "-"){
         if(_trim(this->m_lastPwd).empty()){
             std :: cerr << "error: cd: OLDPWD not set\n";
             return;
         }
         new_path = this->m_lastPwd;
     }else{
-        new_path = this->m_cmd.substr(3, this->m_cmd.size());
+        new_path = args[1];
     }
     char former_path[PATH_MAX];
     if(getcwd(former_path, PATH_MAX) == nullptr) {
@@ -451,7 +458,6 @@ void WatchCommand::execute() {
 
 /////////////////////////////////////////
 
-ExternalCommand::ExternalCommand(const char *cmd_line) : Command(cmd_line) {}
 vector<string> spllitStringByChar(string str, string delim) {
         vector<string> res;
         int index = str.find_first_of(delim);
@@ -461,6 +467,11 @@ vector<string> spllitStringByChar(string str, string delim) {
             str = str.substr(index+1, str.size());
         }
         return res;
+}
+ExternalCommand::ExternalCommand(const char *cmd_line, string org_line) : Command(cmd_line), m_org_word(org_line) {}
+string ExternalCommand :: GetLine() const 
+{
+    return this->m_org_word;
 }
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
@@ -494,6 +505,7 @@ void ExternalCommand :: execute(){
         if(execvp(arguments[0], const_cast<char* const*>(arguments.data())) == -1)
         {
             perror("smash error: execvp failed");
+            exit(1);
         }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
@@ -525,7 +537,7 @@ unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS )
 void unaliasCommand :: execute(){
     vector<string> args;
     int size = _parseCommandLine(m_cmd.c_str(), args);
-    for(int i = 0 ; i < size; i++){
+    for(int i = 1 ; i < size; i++){
         //try{
         m_aliasDS->remove_alias_command(string(args[i]));
         //}catch(const std :: exception& e){
@@ -546,7 +558,7 @@ void RedirectionCommand :: execute(){
         perror("smash error: fork failed");
     }
     if(pid == 0){
-        std ::string line = _trim(_StringRemoveBackgroundSign(this->m_cmd));
+        std ::string line = _trim(_StringremoveBackgroundSign(this->m_cmd.c_str()));
         string file_name = _trim(line.substr(line.find_last_of(">")+1));
         int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (file < 0) {
@@ -572,6 +584,59 @@ void RedirectionCommand :: execute(){
         if(waitpid(pid, &status, 0) == -1){
             perror("smash error: waitpid failed");
         }
+    }
+}
+
+
+PipeCommand :: PipeCommand(const char *cmd_line) : Command(cmd_line){}
+
+void PipeCommand :: execute(){
+    pid_t pid_number, pid;
+    if(( pid_number = fork()) == 0){
+        vector<string> args;
+        _parseCommandLine(this->m_cmd.c_str(), args);
+        bool after_pipe_symbol = false;
+        int stderr_or_stdout = STDOUT;
+        string first_command = "", last_command = "";
+        for(unsigned int i=0; i<args.size(); i++){
+            if(args[i] == "|" || args[i] == "|&"){
+                after_pipe_symbol = true;
+                if(args[i] == "|&"){
+                    stderr_or_stdout = STDERR;
+                }
+                continue;
+            }
+            if(after_pipe_symbol == false){
+                first_command += args[i] + " ";
+            }else{
+                last_command += args[i] + " ";
+            }
+        }
+        if(args.size() < 3 || first_command == "" || last_command == ""){
+            throw std::runtime_error("smash error: unvalid pipe command");
+        }
+        int my_pipe[2];
+        if(pipe(my_pipe) == -1){
+            throw runtime_error("smash error: pipe failed");
+        }
+
+        if ((pid = fork()) == 0) { // son
+            close(my_pipe[0]);
+            dup2(my_pipe[1], stderr_or_stdout); 
+            close(my_pipe[1]); 
+            SmallShell::getInstance().executeCommand(first_command.c_str());
+            exit(0);
+            }
+        else{ // father
+            close(my_pipe[1]);          // Close the write end of the pipe
+            dup2(my_pipe[0], STDIN);   // Redirect stdin to the read end of the pipe
+            close(my_pipe[0]);
+            SmallShell::getInstance().executeCommand(last_command.c_str());
+            exit(0);
+        }
+    }else{
+        int status;
+        waitpid(pid_number, &status, 0);
     }
 }
 /////////////////////////////////////////
@@ -705,35 +770,63 @@ void SmallShell::addJob(Command* cmd, pid_t pid) {
 */
 Command *SmallShell::CreateCommand(const char *cmd_line) {
     string cmd_s = _trim(string(cmd_line));
-    _removeBackgroundSign(&cmd_s[0]);
-    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
+    string original_line(cmd_line);
+    char* str = new char[cmd_s.size() + 1];
+    for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
+    str[cmd_s.size()] = '\0';
+    _removeBackgroundSign(str);
+    cmd_s = str;
+    delete[] str;
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
+    //string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    if(this->m_aliasDS.checkInAlias(firstWord)){
+        string tmp = this->m_aliasDS.TranslateAlias(firstWord);
+        tmp = tmp.substr(1, tmp.size()-2);
+        cmd_s = string(cmd_line);
+        cmd_line = (cmd_s.find_first_of(" \n") != string::npos) ? (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str() : tmp.c_str();
+        cmd_s = _trim(string(cmd_line));
+        str = new char[cmd_s.size() + 1];
+        for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
+        str[cmd_s.size()] = '\0';
+        _removeBackgroundSign(str);
+        cmd_s = str;
+        delete[] str;
+        firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
+    }
+    if (firstWord == "cd") {
+        return new ChangeDirCommand(cmd_line);
+    }
+    else if (firstWord == "chprompt") {
+        return new ChangePrompt(cmd_line);
+    }
+    else if (firstWord == "fg") {
+        return new ForegroundCommand(cmd_line, &m_jobsList);
+    }
+    else if (firstWord == "quit") {
+        return new QuitCommand(cmd_line, &m_jobsList);
+    }
+    if(cmd_s.find("|") != string::npos){
+        return new PipeCommand(cmd_line);
+    }
     if(cmd_s.find(">") != string::npos){
         return new RedirectionCommand(cmd_line);
     }
     if (firstWord == "pwd") {
         return new GetCurrDirCommand(cmd_line);
     }
-    else if (firstWord == "cd") {
-        return new ChangeDirCommand(cmd_line);
+    else if (firstWord.compare("showpid") == 0) {
+        return new ShowPidCommand(cmd_line);
     }
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
-    else if (firstWord == "chprompt") {
-        return new ChangePrompt(cmd_line);
-    }
+
+
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line, &m_jobsList);
     }
-    else if (firstWord == "fg") {
-        return new ForegroundCommand(cmd_line, &m_jobsList);
-    }
     else if (firstWord == "kill") {
         return new KillCommand(cmd_line, &m_jobsList);
-    }
-    else if (firstWord == "quit") {
-        return new QuitCommand(cmd_line, &m_jobsList);
     }
     else if (firstWord == "listdir") {
         return new ListDirCommand(cmd_line);
@@ -747,11 +840,11 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
     }
-    else if(this->m_aliasDS.checkInAlias(firstWord)){
-        cout << "Alias command";
+    else if (firstWord == "unalias"){
+        return new unaliasCommand(cmd_line,&m_aliasDS);
     }
     else {
-        return new ExternalCommand(cmd_line);
+        return new ExternalCommand(cmd_line,original_line);
     }
     return nullptr;
 }
