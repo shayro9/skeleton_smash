@@ -236,7 +236,7 @@ WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
     if(m_interval <= 0){
         throw invalid_argument("smash error: watch: invalid interval");
     }
-    m_isBg = args.back() == "&";
+    m_isBg = args.back().find_first_of('&') != string::npos;
     string line;
     line = cmd_s.substr(cmd_s.find(args[i]));
     SmallShell& shell = SmallShell::getInstance();
@@ -438,8 +438,8 @@ void WatchCommand::execute() {
         close(devNull);
 
         struct itimerval timer;
-        timer.it_value.tv_sec = 1;
-        timer.it_value.tv_usec = 0;
+        timer.it_value.tv_sec = 0;
+        timer.it_value.tv_usec = 10;
         timer.it_interval.tv_sec = m_interval;
         timer.it_interval.tv_usec = 0;
 
@@ -581,7 +581,7 @@ void RedirectionCommand :: execute(){
         if (dup2(file, STDOUT) < 0) {
             close(file);
             perror("smash error: dup2 failed");
-        }
+        }//TODO: BUG
         SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of(WHITESPACE)).c_str())->execute();
         close(STDOUT);
         /*if (dup2(m_std_fd, STDOUT) < 0) {
@@ -823,6 +823,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "watch") {
+        return new WatchCommand(cmd_line);
+    }
     if(cmd_s.find("|") != string::npos){
         return new PipeCommand(cmd_line);
     }
@@ -849,9 +852,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "getuser") {
         return new GetUserCommand(cmd_line);
-    }
-    else if (firstWord == "watch") {
-        return new WatchCommand(cmd_line);
     }
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
