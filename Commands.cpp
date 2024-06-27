@@ -236,10 +236,9 @@ WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
     if(m_interval <= 0){
         throw invalid_argument("smash error: watch: invalid interval");
     }
+    m_isBg = args.back() == "&";
     string line;
-    for (; i < args_num; ++i) {
-        line += args[i];
-    }
+    line = cmd_s.substr(cmd_s.find(args[i]));
     SmallShell& shell = SmallShell::getInstance();
     m_command = shell.CreateCommand(line.c_str());
 }
@@ -417,6 +416,8 @@ void GetUserCommand::execute() {
     cout << "User: " << userName << endl << "Group: " << groupName << endl;
 }
 void WatchCommand::signalHandler(int sig_num) {
+    if(!m_isBg)
+        system("clear");
     m_command->execute();
 }
 void WatchCommand::execute() {
@@ -432,6 +433,9 @@ void WatchCommand::execute() {
         if(signal(SIGALRM, signalHandler) == SIG_ERR){
             perror("smash error: signal failed");
         }
+        int devNull = open("/dev/null", O_WRONLY);
+        dup2(devNull, STDOUT_FILENO);
+        close(devNull);
 
         struct itimerval timer;
         timer.it_value.tv_sec = 1;
@@ -447,11 +451,16 @@ void WatchCommand::execute() {
             pause();
         }
     } else {
-		SmallShell::getInstance().setWorkingPid(child_pid);
-        if(waitpid(child_pid, &wstatus, 0) == -1){
-            perror("smash error: waitpid failed");
+        if(!m_isBg) {
+            SmallShell::getInstance().setWorkingPid(child_pid);
+            if (waitpid(child_pid, &wstatus, 0) == -1) {
+                perror("smash error: waitpid failed");
+            }
+            SmallShell::getInstance().setWorkingPid(-1);
         }
-        SmallShell::getInstance().setWorkingPid(-1);
+        else {
+            SmallShell::getInstance().addJob(this, child_pid);
+        }
     }
 
 }
@@ -509,7 +518,7 @@ void ExternalCommand :: execute(){
         }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
-        if(waitpid(workingPid, &wstatus, 0) == -1){
+        if(waitpid(pid, &wstatus, 0) == -1){
             perror("smash error: waitpid failed");
         }
         smash.setWorkingPid(-1);
@@ -617,7 +626,7 @@ void PipeCommand :: execute(){
         }
         int my_pipe[2];
         if(pipe(my_pipe) == -1){
-            throw runtime_error("smash error: pipe failed");
+            perror("smash error: pipe failed");
         }
 
         if ((pid = fork()) == 0) { // son
@@ -628,6 +637,9 @@ void PipeCommand :: execute(){
             exit(0);
             }
         else{ // father
+            if(pid == -1){
+                perror("smash error: fork failed");
+            }
             close(my_pipe[1]);          // Close the write end of the pipe
             dup2(my_pipe[0], STDIN);   // Redirect stdin to the read end of the pipe
             close(my_pipe[0]);
@@ -635,8 +647,13 @@ void PipeCommand :: execute(){
             exit(0);
         }
     }else{
+        if(pid_number == -1){
+            perror("smash error: fork failed");
+        }
         int status;
-        waitpid(pid_number, &status, 0);
+        if(waitpid(pid_number, &status, 0) == -1){
+            perror("smash error: waitpid failed");
+        }
     }
 }
 /////////////////////////////////////////
@@ -689,9 +706,10 @@ void JobsList :: removeFinishedJobs(){
     for (auto i : ids){
         auto it = m_jobs.find(i);
         if (it != m_jobs.end()){
-            if(waitpid(it->second.Getpid(), &status, WNOHANG) == -1)
+            int wait_num = waitpid(it->second.Getpid(), &status, WNOHANG);
+            if(wait_num == -1)
                 perror("smash error: waitpid failed");
-            else
+            else if(wait_num > 0)
                 removeJobById(i);
         }
     }
@@ -820,8 +838,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
-
-
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line, &m_jobsList);
     }
