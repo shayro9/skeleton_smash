@@ -64,9 +64,9 @@ public:
 };
 
 class WatchCommand : public Command {
-    // TODO: Add your data members
     int m_interval;
     static Command* m_command;
+    static bool m_isBg;
 public:
     WatchCommand(const char *cmd_line);
 
@@ -77,6 +77,7 @@ public:
     static void signalHandler(int sig_num);
 };
 Command* WatchCommand::m_command;
+bool WatchCommand::m_isBg;
 
 class RedirectionCommand : public Command {
     unsigned int m_std_fd;
@@ -100,7 +101,6 @@ public:
     friend bool checkValid(const char* line);
     void execute() override;
 };
-//TODO?
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:

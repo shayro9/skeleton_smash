@@ -149,12 +149,13 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : Bui
     string cmd_s = _trim(string(m_cmd));
     vector<string> args;
     int args_num = _parseCommandLine(cmd_s.c_str(), args);
-    if (args_num > 2)
-        throw invalid_argument("smash error: fg: invalid arguments");
     if (args_num == 1) {
         if (m_jobs->isEmpty())
             throw out_of_range("smash error: fg: jobs list is empty");
         m_job_id = *(--jobs->m_max_ids.end());
+    }
+    else if (args_num > 2) {
+        throw invalid_argument("smash error: fg: invalid arguments");
     }
     else{
         try{
@@ -246,17 +247,19 @@ WatchCommand::WatchCommand(const char *cmd_line) : Command(cmd_line){
     if(m_interval <= 0){
         throw invalid_argument("smash error: watch: invalid interval");
     }
+    m_isBg = args.back().find_first_of('&') != string::npos;
     string line;
-    for (; i < args_num; ++i) {
-        line += args[i];
-    }
+    line = cmd_s.substr(cmd_s.find(args[i]));
     SmallShell& shell = SmallShell::getInstance();
     m_command = shell.CreateCommand(line.c_str());
 }
 
 void GetCurrDirCommand::execute() {
     char path[PATH_MAX];
-    getcwd(path, PATH_MAX);
+    if(getcwd(path, PATH_MAX) == nullptr)
+    {
+        perror("smash error: getcwd failed");
+    }
     cout << path << endl;
 }
 bool checkValid(const string& line){
@@ -320,13 +323,15 @@ void ForegroundCommand::execute() {
     smash.setWorkingPid(workingPid);
     cout << cmd->GetLine() << endl;
     m_jobs->removeJobById(m_job_id);
-    waitpid(workingPid, &status, 0);
+    if(waitpid(workingPid, &status, 0) == -1){
+        perror("smash error: waitpid failed");
+    }
     smash.setWorkingPid(-1);
 }
 void KillCommand::execute() {
     pid_t pid = m_jobs->getJobById(m_jobId)->Getpid();
-    if(kill(pid, m_signum)){
-        //TODO use perror failed
+    if(kill(pid, m_signum) == -1){
+        perror("smash error: kill failed");
     }
     if(m_signum == 9 || m_signum == 3 || m_signum == 1) //TODO: need to check if the signal succeeded? sigs(1 && 3)
         m_jobs->removeJobById(m_jobId);
@@ -341,7 +346,9 @@ void QuitCommand::execute() {
 }
 void sortFiles(map<string, set<string>> &map, const char* path, string fileName){
     struct stat st;
-    lstat(path, &st);
+    if(lstat(path, &st) == -1){
+        perror("smash error: lstat failed");
+    }
     if(S_ISREG(st.st_mode)){
         map["file"].insert(fileName);
     }
@@ -364,7 +371,7 @@ void printKey(string key, set<string> values){
 void ListDirCommand::execute() {
     int opened = open(m_path.c_str(), O_RDONLY | O_DIRECTORY);
     if(opened == -1){
-        perror("smash error: could not open directory");
+        perror("smash error: open failed");
         return;
     }
 
@@ -376,6 +383,7 @@ void ListDirCommand::execute() {
     filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
     filesMap.insert( pair<string ,set<string>>("file", set<string>()));
 
+    //TODO perror???
     while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
@@ -396,58 +404,73 @@ void ListDirCommand::execute() {
 void GetUserCommand::execute() {
     string procPath = "/proc/" + to_string(m_targetPid) + "/status";
     struct stat procStat;
-    if(stat(procPath.c_str(), &procStat) == -1) {
+    if(stat(procPath.c_str(), &procStat) == -1) { //TODO perror?????
         throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
     }
 
     uid_t uid = procStat.st_uid;
     struct passwd *pw = getpwuid(uid);
-
-    gid_t grp = procStat.st_gid;
-    struct group *grp_entry = getgrgid(grp);
-
-    string userName, groupName;
-    if (grp_entry != NULL) {
-        groupName = grp_entry->gr_name;
-    } else {
+    if(pw == nullptr) {
         throw invalid_argument("smash error: getuser: process " + to_string(m_targetPid) + " does not exist");
     }
+    gid_t grp = procStat.st_gid;
+    struct group *grp_entry = getgrgid(grp);
+    if(grp_entry == nullptr){
+        perror("smash error: getgrgid failed");
+    }
 
-    try {
-        userName = pw->pw_name;
-    }
-    catch (const exception& e){
-        throw e;
-        return;
-    }
+    string userName, groupName;
+    groupName = grp_entry->gr_name;
+    userName = pw->pw_name;
 
     cout << "User: " << userName << endl << "Group: " << groupName << endl;
 }
 void WatchCommand::signalHandler(int sig_num) {
+    if(!m_isBg)
+        system("clear");
     m_command->execute();
 }
 void WatchCommand::execute() {
 	int wstatus;
     pid_t child_pid = fork();
+    if(child_pid == -1){
+        perror("smash error: fork failed");
+    }
     if (child_pid == 0) {
-		setpgrp();
-        signal(SIGALRM, signalHandler);
+		if(setpgrp() == -1){
+            perror("smash error: setpqrp failed");
+        }
+        if(signal(SIGALRM, signalHandler) == SIG_ERR){
+            perror("smash error: signal failed");
+        }
+        int devNull = open("/dev/null", O_WRONLY);
+        dup2(devNull, STDOUT_FILENO);
+        close(devNull);
 
         struct itimerval timer;
-        timer.it_value.tv_sec = 1;
-        timer.it_value.tv_usec = 0;
+        timer.it_value.tv_sec = 0;
+        timer.it_value.tv_usec = 10;
         timer.it_interval.tv_sec = m_interval;
         timer.it_interval.tv_usec = 0;
 
-		setitimer(ITIMER_REAL, &timer, nullptr);
+		if(setitimer(ITIMER_REAL, &timer, nullptr) == -1){
+            perror("smash error: setitimer failed");
+        }
 		
         while (true) {
             pause();
         }
     } else {
-		SmallShell::getInstance().setWorkingPid(child_pid);
-        waitpid(child_pid, &wstatus, 0);
-        SmallShell::getInstance().setWorkingPid(-1);
+        if(!m_isBg) {
+            SmallShell::getInstance().setWorkingPid(child_pid);
+            if (waitpid(child_pid, &wstatus, 0) == -1) {
+                perror("smash error: waitpid failed");
+            }
+            SmallShell::getInstance().setWorkingPid(-1);
+        }
+        else {
+            SmallShell::getInstance().addJob(this, child_pid);
+        }
     }
 
 }
@@ -489,6 +512,9 @@ void ExternalCommand :: execute(){
     }
     int wstatus;
     pid_t pid = fork();
+    if(pid == -1){
+        perror("smash error: fork failed");
+    }
     if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
         SmallShell::getInstance().addJob(this, pid);
     }
@@ -502,7 +528,9 @@ void ExternalCommand :: execute(){
         }
     } else if(_isBackgroundComamnd(this->m_cmd) == false){
         smash.setWorkingPid(pid);
-        waitpid(pid, &wstatus, 0);
+        if(waitpid(pid, &wstatus, 0) == -1){
+            perror("smash error: waitpid failed");
+        }
         smash.setWorkingPid(-1);
     }
 }
@@ -553,12 +581,15 @@ RedirectionCommand :: RedirectionCommand(const char *cmd_line) : Command(cmd_lin
 
 void RedirectionCommand :: execute(){
     pid_t pid = fork();
+    if(pid == -1){
+        perror("smash error: fork failed");
+    }
     if(pid == 0){
         std ::string line = _trim(_StringremoveBackgroundSign(this->m_cmd.c_str()));
         string file_name = _trim(line.substr(line.find_last_of(">")+1));
         int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
         if (file < 0) {
-            throw std::runtime_error("smash error: open failed");
+            perror("smash error: open failed");
         }
 /*        int former_std_fd = dup(STDOUT);
         if(former_std_fd < 0) {
@@ -567,8 +598,8 @@ void RedirectionCommand :: execute(){
         }*/
         if (dup2(file, STDOUT) < 0) {
             close(file);
-            throw std::runtime_error("smash error: dup2 failed");
-        }
+            perror("smash error: dup2 failed");
+        }//TODO: BUG
         SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of(WHITESPACE)).c_str())->execute();
         close(STDOUT);
         /*if (dup2(m_std_fd, STDOUT) < 0) {
@@ -577,7 +608,9 @@ void RedirectionCommand :: execute(){
         exit(0);
     }else{
         int status;
-        waitpid(pid, &status, 0);
+        if(waitpid(pid, &status, 0) == -1){
+            perror("smash error: waitpid failed");
+        }
     }
 }
 
@@ -611,7 +644,7 @@ void PipeCommand :: execute(){
         }
         int my_pipe[2];
         if(pipe(my_pipe) == -1){
-            throw runtime_error("smash error: pipe failed");
+            perror("smash error: pipe failed");
         }
 
         if ((pid = fork()) == 0) { // son
@@ -622,6 +655,9 @@ void PipeCommand :: execute(){
             exit(0);
             }
         else{ // father
+            if(pid == -1){
+                perror("smash error: fork failed");
+            }
             close(my_pipe[1]);          // Close the write end of the pipe
             dup2(my_pipe[0], STDIN);   // Redirect stdin to the read end of the pipe
             close(my_pipe[0]);
@@ -629,8 +665,13 @@ void PipeCommand :: execute(){
             exit(0);
         }
     }else{
+        if(pid_number == -1){
+            perror("smash error: fork failed");
+        }
         int status;
-        waitpid(pid_number, &status, 0);
+        if(waitpid(pid_number, &status, 0) == -1){
+            perror("smash error: waitpid failed");
+        }
     }
 }
 /////////////////////////////////////////
@@ -670,7 +711,9 @@ void JobsList :: killAllJobs(){
         JobEntry* temp_job = &m_jobs.find(i)->second;
         Command* temp_cmd = temp_job->GetCommand();
         cout << temp_job->Getpid() << ": " << temp_cmd->GetLine() << endl;
-        kill(temp_job->Getpid(), SIGKILL);
+        if(kill(temp_job->Getpid(), SIGKILL) == -1){
+            perror("smash error: kill failed");
+        }
     }
 }
 
@@ -681,7 +724,10 @@ void JobsList :: removeFinishedJobs(){
     for (auto i : ids){
         auto it = m_jobs.find(i);
         if (it != m_jobs.end()){
-            if(waitpid(it->second.Getpid(), &status, WNOHANG))
+            int wait_num = waitpid(it->second.Getpid(), &status, WNOHANG);
+            if(wait_num == -1)
+                perror("smash error: waitpid failed");
+            else if(wait_num > 0)
                 removeJobById(i);
         }
     }
@@ -795,6 +841,9 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "quit") {
         return new QuitCommand(cmd_line, &m_jobsList);
     }
+    else if (firstWord == "watch") {
+        return new WatchCommand(cmd_line);
+    }
     if(cmd_s.find("|") != string::npos){
         return new PipeCommand(cmd_line);
     }
@@ -810,8 +859,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "showpid") {
         return new ShowPidCommand(cmd_line);
     }
-
-
     else if (firstWord == "jobs") {
         return new JobsCommand(cmd_line, &m_jobsList);
     }
@@ -823,9 +870,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "getuser") {
         return new GetUserCommand(cmd_line);
-    }
-    else if (firstWord == "watch") {
-        return new WatchCommand(cmd_line);
     }
     else if (firstWord == "alias"){
         return new aliasCommand(cmd_line,&m_aliasDS);
@@ -840,7 +884,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
-    // TODO: Add your implementation here
     if(_trim(string(cmd_line)).empty()){
         return;
     }
@@ -897,5 +940,3 @@ std::string aliasCommand_DS :: TranslateAlias(std::string alias){
     return p.first == alias;});
     return it->second;
 }
-
-
