@@ -1,0 +1,7 @@
+#include <iostream>
+using namespace std;
+int main(int argc, char* argv[])
+{
+for (unsigned int i = 0; i < argc; i++){std :: cout << "arg num " << i << " is: " << argv[i] << endl;}
+return 0;
+}
