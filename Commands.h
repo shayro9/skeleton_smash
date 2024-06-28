@@ -31,7 +31,7 @@ public:
     virtual void execute() = 0;
     //virtual void prepare();
     //virtual void cleanup();
-    // TODO: Add your extra methods if needed
+
     virtual string GetLine() const;
     friend std::ostream& operator<<(std::ostream& os, const Command& cmd);
 };
@@ -54,7 +54,6 @@ public:
 };
 
 class PipeCommand : public Command {
-    // TODO: Add your data members
 public:
     PipeCommand(const char *cmd_line);
 
@@ -90,7 +89,6 @@ public:
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members 
     static std :: string m_lastPwd;
 public:
 
@@ -155,7 +153,6 @@ public:
 class JobsList {
 public:
     class JobEntry {
-        // TODO: Add your data members
     private:
         unsigned int m_id;
         bool m_is_finished;
@@ -169,7 +166,6 @@ public:
         bool isFinished() const;
         void Done();
     };
-    // TODO: Add your data members
     std::map<unsigned int, JobEntry> m_jobs;
     std ::set<unsigned int> m_max_ids;
 public:
@@ -192,12 +188,10 @@ public:
     JobEntry *getLastJob(int *lastJobId);
 
     JobEntry *getLastStoppedJob(int *jobId);
-    // TODO: Add extra methods or modify exisitng ones as needed
     bool isEmpty() const;
 };
 
 class JobsCommand : public BuiltInCommand {
-    // TODO: Add your data members
     JobsList* m_jobs;
 public:
     JobsCommand(const char *cmd_line, JobsList *jobs);
@@ -284,7 +278,6 @@ public:
 
 class SmallShell {
 private:
-    // TODO: Add your data members
     std::string m_prompt;
     aliasCommand_DS m_aliasDS;
     JobsList m_jobsList;
@@ -304,7 +297,6 @@ public:
 
     ~SmallShell();
     void executeCommand(const char *cmd_line);
-    // TODO: add extra methods as needed
     std::string GetPrompt();
     void SetPrompt(const std::string& prompt);
     void addJob(Command* cmd, pid_t pid);

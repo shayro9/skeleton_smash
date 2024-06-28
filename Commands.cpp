@@ -106,7 +106,6 @@ string _StringremoveBackgroundSign(const char *cmd_line) {
 }
 
 
-// TODO: Add your implementation for classes in Commands.h
 string Command::GetLine() const {
     return m_cmd;
 }
@@ -323,7 +322,7 @@ void KillCommand::execute() {
     if(kill(pid, m_signum) == -1){
         perror("smash error: kill failed");
     }
-    if(m_signum == 9 || m_signum == 3 || m_signum == 1) //TODO: need to check if the signal succeeded? sigs(1 && 3)
+    if(m_signum == 9 || m_signum == 3 || m_signum == 1)
         m_jobs->removeJobById(m_jobId);
 
     cout << "signal number " << m_signum << " was sent to pid " << pid << endl;
@@ -373,7 +372,7 @@ void ListDirCommand::execute() {
     filesMap.insert(pair<string ,set<string>>("directory", set<string>()));
     filesMap.insert( pair<string ,set<string>>("file", set<string>()));
 
-    //TODO perror???
+
     while ((bytesRead = syscall(SYS_getdents, opened, buffer, maxRead)) > 0) {
         int offset = 0;
         while (offset < bytesRead) {
@@ -386,6 +385,11 @@ void ListDirCommand::execute() {
             offset += entry->d_reclen;
         }
     }
+    if(bytesRead == -1){
+        perror("smash error: getdents failed");
+    }
+
+
     if(!filesMap["file"].empty()) printKey("file", filesMap["file"]);
     if(!filesMap["directory"].empty()) printKey("directory", filesMap["directory"]);
     if(!filesMap["link"].empty()) printKey("link", filesMap["link"]);
@@ -581,8 +585,8 @@ void RedirectionCommand :: execute(){
         if (dup2(file, STDOUT) < 0) {
             close(file);
             perror("smash error: dup2 failed");
-        }//TODO: BUG
-        SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of(WHITESPACE)).c_str())->execute();
+        }
+        SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') - 1).c_str())->execute();
         close(STDOUT);
         /*if (dup2(m_std_fd, STDOUT) < 0) {
             throw std::runtime_error("smash error: dup2 failed");
@@ -761,13 +765,11 @@ pid_t JobsList::JobEntry::Getpid() const {
 
 
 /// @brief ///////////////////////////////
-SmallShell::SmallShell() : m_prompt("smash> "){
-// TODO: add your implementation
+SmallShell::SmallShell() : m_prompt("smash> "), m_fgPid(-1){
 
 }
 
 SmallShell::~SmallShell() {
-// TODO: add your implementation
 }
 
 std::string SmallShell::GetPrompt() {
