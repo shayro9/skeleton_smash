@@ -505,6 +505,7 @@ string ExternalCommand :: GetLine() const
 }
 void ExternalCommand :: execute(){
     std::vector<const char*> arguments;
+    vector<string> tmp;
     string line = _trim(this->m_cmd);
     //string firstWord = line.substr(0, line.find_first_of(WHITESPACE));//?? why " \n"
     _removeBackgroundSign(&line[0]);
@@ -516,7 +517,6 @@ void ExternalCommand :: execute(){
         arguments.push_back(line.c_str());
         arguments.push_back(nullptr);
     }else{
-        vector<string> tmp;
         _parseCommandLine(line.c_str(), tmp);
         for(unsigned int  i= 0 ; i < tmp.size() ; i++){arguments.push_back(tmp[i].c_str());}
         arguments.push_back(nullptr);
@@ -594,7 +594,7 @@ RedirectionCommand :: RedirectionCommand(const char *cmd_line) : Command(cmd_lin
 void RedirectionCommand :: execute(){
     std ::string line = _trim(_StringremoveBackgroundSign(this->m_cmd.c_str()));
     string file_name = _trim(line.substr(line.find_last_of(">")+1));
-    int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0666) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (file < 0) {
         perror("smash error: open failed");
         return;
@@ -823,19 +823,23 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     delete[] str;
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     //string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-    if(this->m_aliasDS.checkInAlias(firstWord)){
-        string tmp = this->m_aliasDS.TranslateAlias(firstWord);
-        tmp = tmp.substr(1, tmp.size()-2);
-        cmd_s = string(cmd_line);
-        cmd_line = (cmd_s.find_first_of(" \n") != string::npos) ? (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str() : tmp.c_str();
-        cmd_s = _trim(string(cmd_line));
-        str = new char[cmd_s.size() + 1];
-        for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
-        str[cmd_s.size()] = '\0';
-        _removeBackgroundSign(str);
-        cmd_s = str;
-        delete[] str;
+    if (this->m_aliasDS.checkInAlias(firstWord)) {
+        std::string tmp = this->m_aliasDS.TranslateAlias(firstWord);
+        tmp = tmp.substr(1, tmp.size() - 2);
+        std::string cmd_s(cmd_line);
+        if (cmd_s.find_first_of(" \n") != std::string::npos) {
+            cmd_s = tmp + cmd_s.substr(cmd_s.find_first_of(" \n"));
+        } else {
+            cmd_s = tmp;
+        }
+
+        cmd_s = _trim(cmd_s);
+        std::string original_cmd_s = cmd_s;
+        cmd_line = original_cmd_s.c_str();
+        _removeBackgroundSign(&cmd_s[0]);
+
         firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
+
     }
     if (firstWord == "cd") {
         return new ChangeDirCommand(cmd_line);
