@@ -67,6 +67,6 @@ void Tempo(const char* cmd_line){
 
 int main(int argc , char**argv)
 {
-    Tempo("c ayal");
+    Tempo("c shay");
     return 0;
 }
