@@ -20,6 +20,15 @@
 #include <pwd.h>
 #include <grp.h>
 
+#define SYSCALL_CHECK(syscall, message) \
+    do { \
+        if ((syscall) == -1) { \
+            perror(message.c_str()); \
+            return; \
+        } \
+    } while (0)
+
+
 using namespace std;
 
 extern std :: string ChangeDirCommand :: m_lastPwd;
@@ -104,7 +113,9 @@ string _StringremoveBackgroundSign(const char *cmd_line) {
     // truncate the command line string up to the last non-space character
     return _rtrim(str);
 }
-
+string insertErrorMessage(const string msg){
+    return ("smash error: " + msg + " failed");
+}
 
 string Command::GetLine() const {
     return m_cmd;
@@ -259,34 +270,33 @@ bool checkValid(const string& line){
     return true;
 }
 void ChangeDirCommand ::execute() {
-    ///// TO fix this
     string cmd_s = _trim(string(m_cmd));
     vector<string> args;
     string new_path;
     int args_num = _parseCommandLine(cmd_s.c_str(), args);
     if(args_num > 2 ){
         //TODO: error
-        std :: cerr << "error: cd: too many arguments\n";
-        return;
+        throw runtime_error("error: cd: too many arguments");
     }
-    if(args[1] == "-"){
+    if(args_num > 1 && args[1] == "-"){
         if(_trim(this->m_lastPwd).empty()){
-            std :: cerr << "error: cd: OLDPWD not set\n";
-            return;
+            throw runtime_error("error: cd: OLDPWD not set");
         }
         new_path = this->m_lastPwd;
     }else{
-        new_path = args[1];
+        new_path = args_num >1 ? args[1] : "";
     }
     char former_path[PATH_MAX];
-    if(getcwd(former_path, PATH_MAX) == nullptr) {
-        perror("smash error: getcwd failed");
+    if(getcwd(former_path, PATH_MAX) == NULL){
+        perror(insertErrorMessage("getcwd").c_str());
+        return;
     }
-    int res = chdir(new_path.c_str());
-    if(res !=0){
-        perror("smash error: chdir failed");
-        return; //TODO exit?
+    if(args_num == 1){
+        this->m_lastPwd = string(former_path);
+        return;
     }
+    int res;
+    SYSCALL_CHECK((res = chdir(new_path.c_str())), insertErrorMessage("chdir") );
     this->m_lastPwd = string(former_path);
 }
 void ShowPidCommand::execute() {
@@ -531,18 +541,26 @@ void ExternalCommand :: execute(){
 
 aliasCommand ::aliasCommand(const char *cmd_line, aliasCommand_DS *aliasDS) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
 void aliasCommand:: execute(){
+    string cmd_s = _trim(string(m_cmd));
+    vector<string> args;
+    string new_path;
+    int args_num = _parseCommandLine(cmd_s.c_str(), args);
     string line = _trim(string(m_cmd));
-    if(line =="alias"){
+    if(args_num == 1 && args[0] =="alias"){
         m_aliasDS->print_alias_command();
         return;
+    }
+    //string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
+    string name  = args[1].substr(0,args[1].find_first_of(WHITESPACE));
+    if(this->m_aliasDS.checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
+        throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
     }
     regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
     if(regex_match(line, reg) == false){
         throw std::invalid_argument("smash error: alias: invalid alias format");
     }
-    string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
-    string command = m_cmd.substr(m_cmd.find_first_of("=") + 1);
-    m_aliasDS->add_alias_command(name, command);// removing quotes from the command
+    string command = args[1].substr(args[1].find_first_of("=") + 1);
+    m_aliasDS->add_alias_command(name, command);// without removing quotes from the command
 }
 
 unaliasCommand :: unaliasCommand(const char *cmd_line,aliasCommand_DS *aliasDS ) : BuiltInCommand(cmd_line) , m_aliasDS(aliasDS){}
@@ -893,9 +911,10 @@ pid_t SmallShell::getWorkingPid() const {
     return m_fgPid;
 }
 void aliasCommand_DS :: add_alias_command(std :: string name, std::string command){
-    if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
+    /*if(this->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
         throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
-    }
+    }*/ 
+   //Already checked in the function
     m_alias.push_back({name, command});
 }
 void aliasCommand_DS :: remove_alias_command(std :: string name){
