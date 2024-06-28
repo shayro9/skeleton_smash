@@ -589,39 +589,35 @@ RedirectionCommand :: RedirectionCommand(const char *cmd_line) : Command(cmd_lin
 
 
 void RedirectionCommand :: execute(){
-    pid_t pid = fork();
-    if(pid == -1){
-        perror("smash error: fork failed");
+    std ::string line = _trim(_StringremoveBackgroundSign(this->m_cmd.c_str()));
+    string file_name = _trim(line.substr(line.find_last_of(">")+1));
+    int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    if (file < 0) {
+        perror("smash error: open failed");
     }
-    if(pid == 0){
-        std ::string line = _trim(_StringremoveBackgroundSign(this->m_cmd.c_str()));
-        string file_name = _trim(line.substr(line.find_last_of(">")+1));
-        int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-        if (file < 0) {
-            perror("smash error: open failed");
-        }
-/*        int former_std_fd = dup(STDOUT);
-        if(former_std_fd < 0) {
-            close(file);
-            throw std::runtime_error("smash error: dup failed");
-        }*/
-        if (dup2(file, STDOUT) < 0) {
-            close(file);
-            perror("smash error: dup2 failed");
-        }
-        SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') - 1).c_str())->execute();
-        close(STDOUT);
-        /*if (dup2(m_std_fd, STDOUT) < 0) {
-            throw std::runtime_error("smash error: dup2 failed");
-        }*/
-        exit(0);
-    }else{
-        int status;
-        if(waitpid(pid, &status, 0) == -1){
-            perror("smash error: waitpid failed");
-        }
+    int former_std_fd = dup(STDOUT);
+    if(former_std_fd < 0) {
+        close(file);
+        perror("smash error: dup failed");
+        return;
     }
+    if (dup2(file, STDOUT) < 0) {
+        close(file);
+        perror("smash error: dup2 failed");
+        return;
+    }
+    try{
+    SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') - 1).c_str())->execute();
+    }catch(std::exception& e){
+    close(STDOUT);
+    SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
+    close(former_std_fd);        
+    }
+    close(STDOUT);
+    SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
+    close(former_std_fd);
 }
+
 
 
 PipeCommand :: PipeCommand(const char *cmd_line) : Command(cmd_line){}
