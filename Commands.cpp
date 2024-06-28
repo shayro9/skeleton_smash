@@ -559,7 +559,7 @@ void aliasCommand:: execute(){
         return;
     }
     //string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
-    string name  = args[1].substr(0,args[1].find_first_of(WHITESPACE));
+    string name  = args[1].substr(0,args[1].find_first_of("="));
     if(this->m_aliasDS->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
         throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
     }
@@ -567,7 +567,7 @@ void aliasCommand:: execute(){
     if(regex_match(line, reg) == false){
         throw std::invalid_argument("smash error: alias: invalid alias format");
     }
-    string command = args[1].substr(args[1].find_first_of("=") + 1);
+    string command = line.substr(line.find_first_of("=") + 1);
     m_aliasDS->add_alias_command(name, command);// without removing quotes from the command
 }
 
@@ -852,6 +852,12 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     else if (firstWord == "watch") {
         return new WatchCommand(cmd_line);
     }
+    else if (firstWord == "alias"){
+        return new aliasCommand(cmd_line,&m_aliasDS);
+    }
+    else if (firstWord == "unalias"){
+        return new unaliasCommand(cmd_line,&m_aliasDS);
+    }
     if(cmd_s.find("|") != string::npos){
         return new PipeCommand(cmd_line);
     }
@@ -878,12 +884,6 @@ Command *SmallShell::CreateCommand(const char *cmd_line) {
     }
     else if (firstWord == "getuser") {
         return new GetUserCommand(cmd_line);
-    }
-    else if (firstWord == "alias"){
-        return new aliasCommand(cmd_line,&m_aliasDS);
-    }
-    else if (firstWord == "unalias"){
-        return new unaliasCommand(cmd_line,&m_aliasDS);
     }
     else {
         return new ExternalCommand(cmd_line,original_line);
