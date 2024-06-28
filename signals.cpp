@@ -13,6 +13,6 @@ void ctrlCHandler(int sig_num) {
     if(smash.isWaiting()){
         pid_t pid = smash.getWorkingPid();
         kill(pid, SIGKILL);
-        cout << "smash: process "+ to_string(pid) + " was killed." << endl;
+        cout << "smash: process "+ to_string(pid) + " was killed" << endl;
     }
 }

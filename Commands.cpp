@@ -161,6 +161,9 @@ ForegroundCommand::ForegroundCommand(const char *cmd_line, JobsList *jobs) : Bui
     else{
         try{
             m_job_id = stoi(args[1]);
+            if(m_job_id < 0){
+				throw invalid_argument("smash error: fg: invalid arguments");
+			}
         }
         catch (...){
             throw invalid_argument("smash error: fg: invalid arguments");
@@ -319,10 +322,10 @@ void ForegroundCommand::execute() {
     }
     SmallShell &smash = SmallShell::getInstance();
     Command* cmd = job->GetCommand();
-    pid_t workingPid = job->Getpid();
+    pid_t workingPid = m_jobs->getJobById((m_job_id))->Getpid();
     int status;
     smash.setWorkingPid(workingPid);
-    cout << cmd->GetLine() << endl;
+    cout << cmd->GetLine() << " " << workingPid << endl;
     m_jobs->removeJobById(m_job_id);
     if(waitpid(workingPid, &status, 0) == -1){
         perror("smash error: waitpid failed");

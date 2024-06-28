@@ -216,7 +216,7 @@ public:
 class ForegroundCommand : public BuiltInCommand {
 private:
     JobsList* m_jobs;
-    unsigned int m_job_id;
+    int m_job_id;
 public:
     ForegroundCommand(const char *cmd_line, JobsList *jobs);
 

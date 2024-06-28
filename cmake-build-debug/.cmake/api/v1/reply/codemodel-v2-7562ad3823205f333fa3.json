@@ -39,7 +39,7 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "skeleton_smash::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-skeleton_smash-Debug-94a45d31585bc5af8dbf.json",
+					"jsonFile" : "target-skeleton_smash-Debug-a875db563c960fa537d4.json",
 					"name" : "skeleton_smash",
 					"projectIndex" : 0
 				}
@@ -55,6 +55,6 @@
 	"version" : 
 	{
 		"major" : 2,
-		"minor" : 3
+		"minor" : 6
 	}
 }
