@@ -182,6 +182,8 @@ KillCommand::KillCommand(const char *cmd_line, JobsList *jobs) : BuiltInCommand(
     try {
         m_signum = stoi(args[1].substr(1));
         m_jobId = stoi(args[2]);
+        if(m_jobId < 0)
+            throw invalid_argument("smash error: kill: invalid arguments");
     }
     catch (...) {
         throw invalid_argument("smash error: kill: invalid arguments");
