@@ -203,7 +203,7 @@ public:
 class KillCommand : public BuiltInCommand {
 private:
     unsigned int m_signum;
-    unsigned int m_jobId;
+    int m_jobId;
     JobsList* m_jobs;
 public:
     KillCommand(const char *cmd_line, JobsList *jobs);
@@ -216,7 +216,7 @@ public:
 class ForegroundCommand : public BuiltInCommand {
 private:
     JobsList* m_jobs;
-    unsigned int m_job_id;
+    int m_job_id;
 public:
     ForegroundCommand(const char *cmd_line, JobsList *jobs);
 
