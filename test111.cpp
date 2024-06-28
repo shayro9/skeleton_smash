@@ -39,27 +39,12 @@ string _trim(const std::string &s) {
 
 void Tempo(const char* cmd_line){
     string cmd_s = _trim(string(cmd_line));
-    string original_line(cmd_line);
-    char* str = new char[cmd_s.size() + 1];
-    for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
-    str[cmd_s.size()] = '\0';
-    _removeBackgroundSign(str);
-    cmd_s = str;
-    delete[] str;
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     //string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
     if(firstWord == "c"){ //tODO ?????
         string tmp = "chprompt"; // TODO ?????
-        tmp = tmp.substr(1, tmp.size()-2);
         cmd_s = string(cmd_line);
         cmd_line = (cmd_s.find_first_of(" \n") != string::npos) ? (tmp + cmd_s.substr(cmd_s.find_first_of(" \n"))).c_str() : tmp.c_str();
-        cmd_s = _trim(string(cmd_line));
-        str = new char[cmd_s.size() + 1];
-        for(unsigned int i = 0; i < cmd_s.size(); i++){str[i] = cmd_s[i];}
-        str[cmd_s.size()] = '\0';
-        _removeBackgroundSign(str);
-        cmd_s = str;
-        delete[] str;
         firstWord = cmd_s.substr(0, cmd_s.find_first_of(WHITESPACE));
     }
     cout << cmd_line << endl;
@@ -67,6 +52,6 @@ void Tempo(const char* cmd_line){
 
 int main(int argc , char**argv)
 {
-    Tempo("c shay");
+    Tempo("c ayal");
     return 0;
 }
