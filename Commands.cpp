@@ -34,7 +34,7 @@ using namespace std;
 extern Command* WatchCommand::m_command;
 extern bool WatchCommand::m_isBg;
 extern std :: string ChangeDirCommand :: m_lastPwd;
-extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
+extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid", "jobs", "fg", "kill", "quit", "alias", "unalias", "listdir", "watch", "getuser", ">>", ">", "|" };
 const std::string WHITESPACE = " \n\r\t\f\v";
 const int STDIN = 0;
 const int STDOUT = 1;
@@ -520,6 +520,7 @@ void ExternalCommand :: execute(){
     pid_t pid = fork();
     if(pid == -1){
         perror("smash error: fork failed");
+        return;
     }
     if(_isBackgroundComamnd(this->m_cmd) == true && pid > 0){
         SmallShell::getInstance().addJob(this, pid);
@@ -591,6 +592,7 @@ void RedirectionCommand :: execute(){
     int file = (line.find(">>") != string::npos) ? open(file_name.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR) :open(file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (file < 0) {
         perror("smash error: open failed");
+        return;
     }
     int former_std_fd = dup(STDOUT);
     if(former_std_fd < 0) {
@@ -604,11 +606,12 @@ void RedirectionCommand :: execute(){
         return;
     }
     try{
-    SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') - 1).c_str())->execute();
+    SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') ).c_str())->execute();
     }catch(std::exception& e){
-    close(STDOUT);
-    SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
-    close(former_std_fd);        
+        close(STDOUT);
+        SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
+        close(former_std_fd); 
+        throw ;       
     }
     close(STDOUT);
     SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
