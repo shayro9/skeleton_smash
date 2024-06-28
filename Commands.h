@@ -75,8 +75,7 @@ public:
 
     static void signalHandler(int sig_num);
 };
-Command* WatchCommand::m_command;
-bool WatchCommand::m_isBg;
+
 
 class RedirectionCommand : public Command {
     unsigned int m_std_fd;

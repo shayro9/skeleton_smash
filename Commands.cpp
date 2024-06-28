@@ -31,6 +31,8 @@
 
 using namespace std;
 
+extern Command* WatchCommand::m_command;
+extern bool WatchCommand::m_isBg;
 extern std :: string ChangeDirCommand :: m_lastPwd;
 extern const vector<string> SMASH_COMMANDS = {"pwd", "cd", "chprompt", "showpid"};
 const std::string WHITESPACE = " \n\r\t\f\v";
