@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <csignal>
-//#include "Commands.h"
+#include "Commands.h"
 #include "signals.h"
 
 int main(int argc, char *argv[]) {

@@ -552,7 +552,7 @@ void aliasCommand:: execute(){
     }
     //string name  = line.substr(line.find_first_of(" ")+1, line.find_first_of("=")-(line.find_first_of(" ")+1));
     string name  = args[1].substr(0,args[1].find_first_of(WHITESPACE));
-    if(this->m_aliasDS.checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
+    if(this->m_aliasDS->checkInAlias(name) == true || count(SMASH_COMMANDS.begin(), SMASH_COMMANDS.end(), name) > 0){
         throw std::invalid_argument( "smash error: alias: " + name + " already exists or is a reserved command");
     }
     regex reg("^alias [a-zA-Z0-9_]+='[^']*'$");
