@@ -603,11 +603,17 @@ void RedirectionCommand :: execute(){
         perror("smash error: dup2 failed");
         return;
     }
+    try{
     SmallShell::getInstance().CreateCommand(line.substr(0, line.find_first_of('>') - 1).c_str())->execute();
+    }catch(std::exception& e){
+    close(STDOUT);
+    SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
+    close(former_std_fd);        
+    }
     close(STDOUT);
     SYSCALL_CHECK(dup2(former_std_fd, STDOUT) , insertErrorMessage("dup2"));
     close(former_std_fd);
-    }
+}
 
 
 
